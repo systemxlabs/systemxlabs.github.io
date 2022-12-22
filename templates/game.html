@@ -30,6 +30,8 @@
     </style>
 </head>
 <script type="module">
+    // github pages 上的路径跟本地 zola serve 不一样
+    // import init from './{{ page.title }}/{{ page.title }}.js'
     import init from './{{ page.title }}.js'
     init()
 </script>

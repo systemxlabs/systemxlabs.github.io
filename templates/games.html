@@ -5,12 +5,11 @@
   {{ section.title }}
 </h1>
 
-{% for subsection in section.subsections %}
-{% set section = get_section(path=subsection) %}
+{% for page in section.pages %}
 
-<a class="anchor-target" id="{{ section.title | slugify }}"></a>
+<a class="anchor-target" id="{{ page.title | slugify }}"></a>
 <h3 class="asset-section">
-    <a class="anchor-link" href="/games/{{ section.title | slugify }}">{{ section.title }}</a>
+    <a class="anchor-link" href="/games/{{ page.title | slugify }}">{{ page.title }}</a>
 </h3>
 
 {% endfor %}

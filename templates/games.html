@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="title">
+  {{ section.title }}
+</h1>
+
+{% for subsection in section.subsections %}
+{% set section = get_section(path=subsection) %}
+
+<a class="anchor-target" id="{{ section.title | slugify }}"></a>
+<h3 class="asset-section">
+    <a class="anchor-link" href="/games/{{ section.title | slugify }}">{{ section.title }}</a>
+</h3>
+
+{% endfor %}
+
+{% endblock content %}

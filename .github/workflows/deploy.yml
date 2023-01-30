@@ -9,10 +9,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3.3.0
-        with:
-          set-safe-directory: '/github/workspace'  # see failed case https://github.com/NightsWatchGames/nightswatchgames.github.io/actions/runs/4040309510
       - name: build_and_deploy
-        uses: shalzz/zola-deploy-action@v0.16.1
+        uses: lewszlw/zola-deploy-action@master
         env:
           BUILD_THEMES: false
           # Target branch

@@ -4,6 +4,6 @@
 <h1 class="title">
   This is my website made with Zola.
 </h1>
-<p>Click <a href="/blog">here</a> to see my posts.</p>
-<p>Click <a href="/games">here</a> to see my games.</p>
+<p>Click <a href="{{ get_url(path='@/blog/_index.md') }}">here</a> to see my posts.</p>
+<p>Click <a href="{{ get_url(path='@/games/_index.md') }}">here</a> to see my games.</p>
 {% endblock content %}

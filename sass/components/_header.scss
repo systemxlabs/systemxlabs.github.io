@@ -1,0 +1,37 @@
+.header {
+    &__content {
+        width: 100%;
+        max-width: $max-width;
+        height: var(--header-height);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 auto;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-left: 8px;
+        height: var(--header-height);
+        background-color: $color-grey-800;
+        border-bottom: 2px solid #313131;
+
+        a {
+            display: flex;
+            align-items: center;
+        }
+    }
+    
+    &__nav {
+        display: flex;
+        margin: 0;
+        padding: 0;
+    }
+
+    &__nav_entry {
+        list-style: none;
+        width: 80px;
+    }
+}

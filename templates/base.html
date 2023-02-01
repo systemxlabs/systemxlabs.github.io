@@ -4,15 +4,34 @@
 <head>
   <meta charset="utf-8">
   <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="stylesheet" href="/site.css" />
   <title>Night's Watch Games</title>
 </head>
 
 <body>
-  <section class="section">
-    <div class="container">
-      {% block content %} {% endblock %}
+  <header>
+    <div class="header__content">
+      <div class="header__logo">
+        <a href="/">
+          <img class="logo" src="/assets/favicon.png" alt="Night's Watch Games">
+        </a>
+      </div>
+      <label>
+        Night's Watch Games
+      </label>
+
+      <ul class="header__nav">
+        <li class="header__nav_entry"><a href="/games">Games</a></li>
+        <li class="header__nav_entry"><a href="/blog">Blog</a></li>
+        <li class="header__nav_entry"><a href="/about">About</a></li>
+      </ul>
     </div>
-  </section>
+  </header>
+  <main class="main__content">
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
 </body>
 
 </html>

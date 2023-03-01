@@ -5,13 +5,23 @@
   {{ section.title }}
 </h1>
 
-{% for page in section.pages %}
+<div class="games">
+  {% for page in section.pages %}
+  <a href="{{ page.path }}">
+    <div class="games__card">
+      <div class="games__card__image">
+        <img src="/assets/nightswatch_logo.svg" />
+      </div>
+      <div class="games__card__title">
+        {{ page.title }}
+      </div>
+      <div class="games__card__subtitle">
+        {{ page.extra.subtitle }}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
 
-<a class="anchor-target" id="{{ page.title | slugify }}"></a>
-<h3 class="asset-section">
-    <a class="anchor-link" href="/games/{{ page.title | slugify }}/">{{ page.title }}</a>
-</h3>
-
-{% endfor %}
 
 {% endblock content %}

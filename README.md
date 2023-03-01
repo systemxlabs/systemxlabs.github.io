@@ -13,3 +13,7 @@ generate static files for debugging
 ```
 zola build
 ```
+
+## Reference
+- https://github.com/bevyengine/bevy-website
+- https://github.com/getzola/even

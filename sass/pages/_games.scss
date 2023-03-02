@@ -42,5 +42,35 @@
             margin-left: 180px;
             color: black;
         }
+
+        &__link {
+            display: block;
+            margin-left: 180px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            font-size: 1.0rem;
+            svg {
+                display: inline-block;
+                width: 32px;
+                height: 32px;
+                margin-right: 5px;
+                vertical-align: middle;
+
+                &:hover {
+                    fill: #2f76d0;
+                }
+            }
+            button {
+                border: none;
+                border-radius: 10px;
+                padding: 10px 10px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                cursor: pointer;
+                vertical-align: middle;
+            }
+        }
     }
 }

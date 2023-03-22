@@ -15,5 +15,6 @@ zola build
 ```
 
 ## Reference
-- https://github.com/bevyengine/bevy-website
-- https://github.com/getzola/even
+- [Bevy website](https://github.com/bevyengine/bevy-website)
+- [getzola/even](https://github.com/getzola/even)
+- [Tera template engine docs](https://tera.netlify.app/docs/)

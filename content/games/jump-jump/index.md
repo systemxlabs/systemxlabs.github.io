@@ -1,6 +1,6 @@
 +++
 title = "jump-jump"
-template = "game.html"
+date = 2023-02-08
 
 [extra]
 subtitle = "3D wechat jump-jump game made with bevy engine."

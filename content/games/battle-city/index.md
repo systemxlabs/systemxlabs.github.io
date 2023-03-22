@@ -1,6 +1,6 @@
 +++
 title = "battle-city"
-template = "game.html"
+date = 2023-03-22
 
 [extra]
 subtitle = "Classical battle-city game made with bevy engine."

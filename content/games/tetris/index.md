@@ -1,6 +1,6 @@
 +++
 title = "tetris"
-template = "game.html"
+date = 2022-12-28
 
 [extra]
 subtitle = "Classical tetris game made with bevy engine."

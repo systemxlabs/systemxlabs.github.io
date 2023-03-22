@@ -3,10 +3,38 @@
 {% block content %}
 <div class="home">
   <h1 class="home__title">
-    Build open source games for fun.
+    Build Open Source Games For Fun.
   </h1>
-  <p>Click <a href="/blog">here</a> to see my posts.</p>
-  <p>Click <a href="/games">here</a> to see my games.</p>
+
+  <h2>
+    Latest games
+  </h2>
+
+  {% set section = get_section(path="games/_index.md") %}
+
+  <ul>
+  {% for page in section.pages %}
+    {% if loop.index > 3 %}{% break %}{% endif %}
+    <li><a href="{{ page.path | safe }}">{{ page.title }}</a></li>
+  {% endfor %}
+  </ul>
+
+  <p><a href="/games">See all games &rarr;</a></p>
+
+  <h2>
+    Latest posts
+  </h2>
+
+  {% set section = get_section(path="blog/_index.md") %}
+  <ul>
+  {% for page in section.pages %}
+    {% if loop.index > 3 %}{% break %}{% endif %}
+    <li><a href="{{ page.path | safe }}">{{ page.title }}</a></li>
+  {% endfor %}
+  </ul>
+
+
+  <p><a href="/blog">See all posts &rarr;</a></p>
 
 </div>
 

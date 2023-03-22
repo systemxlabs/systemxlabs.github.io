@@ -1,6 +1,6 @@
 +++
 title = "rubiks-cube"
-template = "game.html"
+date = 2023-01-01
 
 [extra]
 subtitle = "Rubik's cube made with bevy engine."

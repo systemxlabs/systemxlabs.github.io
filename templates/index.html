@@ -3,14 +3,14 @@
 {% block content %}
 <div class="home">
   <h1 class="home__title">
-    Build Open Source Games For Fun.
+    Build System Softwares For Fun.
   </h1>
 
   <h2>
-    Latest games
+    Latest projects
   </h2>
 
-  {% set section = get_section(path="games/_index.md") %}
+  {% set section = get_section(path="projects/_index.md") %}
 
   <ul>
   {% for page in section.pages %}
@@ -19,7 +19,7 @@
   {% endfor %}
   </ul>
 
-  <p><a href="/games">See all games &rarr;</a></p>
+  <p><a href="/projects">See all projects &rarr;</a></p>
 
   <h2>
     Latest posts

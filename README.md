@@ -11,7 +11,7 @@ zola serve
 
 generate static files for debugging
 ```
-zola build 
+zola build
 ```
 
 ## Reference

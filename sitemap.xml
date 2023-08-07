@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://systemxlabs.github.io/</loc>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/about/</loc>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/blog/</loc>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/blog/distributed-job-scheduling/</loc>
+        <lastmod>2021-12-01</lastmod>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/blog/implement-httpd/</loc>
+        <lastmod>2022-07-12</lastmod>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/blog/raft-consensus-algorithm/</loc>
+        <lastmod>2023-03-28</lastmod>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/projects/</loc>
+    </url>
+    <url>
+        <loc>https://systemxlabs.github.io/projects/tinysql/</loc>
+        <lastmod>2023-08-07</lastmod>
+    </url>
+</urlset>

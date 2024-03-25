@@ -18,19 +18,12 @@
             border: 3px solid #6b6b6b;
         }
 
-        &__image {
-            float: left;
-            img {
-                height: 100px;
-            }
-        }
-
         &__title {
             display: block;
             font-size: 2.8rem;
             font-weight: 800;
             margin-top: 5px;
-            margin-left: 180px;
+            margin-left: 5px;
             color: black;
         }
 
@@ -39,13 +32,13 @@
             font-size: 1.22rem;
             font-weight: 200;
             font-style: italic;
-            margin-left: 180px;
+            margin-left: 5px;
             color: black;
         }
 
         &__link {
             display: block;
-            margin-left: 180px;
+            margin-left: 5px;
             margin-top: 5px;
             margin-bottom: 5px;
             font-size: 1.0rem;

@@ -1,6 +1,6 @@
 +++
 title = "bustubx"
-date = 2023-08-07
+date = 2024-03-22
 
 [extra]
 subtitle = "A relational database written in Rust for educational purpose, heavily inspired by cmu-db/bustub. (CMU 15-445)."

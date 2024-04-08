@@ -47,8 +47,16 @@ DBMS 可能支持多种进程模型，比如 DB2 支持以上四种，Oracle 在
 ### 无共享（Shared-Nothing）
 <img src="shared-nothing-architecture.png" alt="shared-nothing-architecture" width="400"/>
 
-通过网络互联通信。
+通过网络互联通信。表数据被水平分区到不同机器，对于每个 SQL 请求，会被发送到集群其他成员，然后各自并行执行查询本地所保存的数据。事务实现较复杂。可扩展性强。需要冗余数据来提高可用性。
 
 ### 共享磁盘（Shared-Disk）
+<img src="shared-disk-architecture.png" alt="shared-disk-architecture" width="400"/>
+
+单个 DBMS 执行节点发生故障不会影响其他节点访问整个数据库。需要手动协调多个节点的共享数据（分布式锁，分布式缓冲池）。
 
 ### NUMA（Non-Uniform Memory Access）
+<img src="numa-architecture.png" alt="numa-architecture" width="400"/>
+
+处理器访问本地内存比远程内存更快。NUMA 允许共享内存系统扩展到更多数量处理器的规模。
+
+## 关系查询处理器

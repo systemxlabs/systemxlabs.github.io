@@ -3,7 +3,7 @@ title = "Ballista 分布式查询引擎 - 架构总览"
 date = 2024-04-17
 +++
 
-[Ballista] 是使用 Rust 编写的，基于 [Arrow] 内存模型、[Datafusion] 单机查询引擎和 [Flight SQL] 网络协议实现的类似 Spark SQL 的分布式查询引擎。
+[Ballista] 是使用 Rust 编写的，基于 [Arrow] 内存数据格式、[Datafusion] 单机查询引擎和 [Flight SQL] 网络协议实现的类似 Spark SQL 的分布式查询引擎。
 
 本系列主要基于 [ballista-mvp] 项目，它是从 [Ballista] 项目裁剪而来，保留其最小核心实现，方便学习，基于它来分析如何构建一个分布式查询引擎。
 

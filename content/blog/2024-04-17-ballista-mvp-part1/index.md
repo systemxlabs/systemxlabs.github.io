@@ -25,7 +25,7 @@ Executor 集群
 1. Client 通过 Flight SQL 协议连接到 Scheduler 并发送原始 SQL
 2. Scheduler 使用 Datafusion 查询引擎来生成单机的执行计划
 3. Scheduler 将单机执行计划拆分成多个 stage 的 DAG 执行图，每个 stage 可以被独立调度执行
-4. Scheduler 生成 Task（job-stage-partition）通过 protobuf 序列化后发送到 executor 集群并行执行
+4. Scheduler 生成 Task（job-stage-partition）通过 protobuf 序列化后发送到 Executor 集群并行执行
 5. Executor 接收 Task 并执行，并将中间执行结果写入本地磁盘（供后续 stage 读取），并通知 Scheduler Task 执行状态
 6. Scheduler 接收 Task 执行状态后，调度后续 stage 直至整个 DAG 图执行完毕
 7. Scheduler 返回 SQL 执行结果给 Client

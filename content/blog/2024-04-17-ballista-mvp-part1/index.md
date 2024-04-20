@@ -32,6 +32,6 @@ Executor 集群
 
 [Arrow]: https://github.com/apache/arrow-rs
 [Flight SQL]: https://github.com/apache/arrow-rs/tree/master/arrow-flight
-[Ballista]: https://github.com/apache/arrow-ballista
-[Datafusion]: https://github.com/apache/arrow-datafusion
+[Ballista]: https://github.com/apache/datafusion-ballista
+[Datafusion]: https://github.com/apache/datafusion
 [ballista-mvp]: https://github.com/systemxlabs/ballista-mvp

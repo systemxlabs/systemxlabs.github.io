@@ -10,7 +10,7 @@ SELECT customer.c_custkey, sum(orders.o_totalprice) as total_amount
 FROM customer JOIN orders ON customer.c_custkey = orders.o_custkey 
 GROUP BY customer.c_custkey;
 ```
-注：customer 和 orders 两张表数据均分为 3 个 parquet 文件存储。
+注：customer 和 orders 两张表数据各分为 3 个 parquet 文件存储。
 
 **使用 Datafusion 生成单机执行计划**
 ```
@@ -72,3 +72,39 @@ UnsolvedShuffleExec 会被 ShuffleReaderExec 算子替代。
 2. 每个 stage 最终都会通过 ShuffleWriterExec 算子将执行结果 repartition 并写入本地磁盘。
 3. 每个有前置依赖的 stage 都会从 ShuffleReaderExec 算子开始执行，ShuffleReaderExec 算子负责读取前置 stage 产生的中间执行结果。
 
+**ShuffleWriterExec 算子**
+```rust
+pub struct ShuffleWriterExec {
+    /// 所属 job (即 query)，全局唯一
+    job_id: String,
+    /// stage id，job 内唯一
+    stage_id: usize,
+    /// stage 执行计划
+    plan: Arc<dyn ExecutionPlan>,
+    /// 中间结果写入磁盘目录
+    work_dir: String,
+    /// 输出的 partition 方案，空则代表不做 repartition
+    shuffle_output_partitioning: Option<Partitioning>,
+    /// 执行过程中的指标
+    metrics: ExecutionPlanMetricsSet,
+}  
+```
+
+1. work_dir 在生成分布式执行计划时为空，等到实际执行时，会被替换为 executor 的 work_dir。
+2. 最终每个 partition 数据以 Arrow IPC 格式存储
+    - 当不做 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<partition>/data.arrow`
+    - 当需要 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<output_partition>/data-<input_partition>.arrow`
+
+**ShuffleReaderExec 算子**
+```rust
+pub struct ShuffleReaderExec {
+    /// 需要读取的 stage id
+    pub stage_id: usize,
+    /// 输出的 schema
+    pub(crate) schema: SchemaRef,
+    /// 每个 partition 可以从多个位置读取
+    pub partition: Vec<Vec<PartitionLocation>>,
+    /// 执行过程中的指标
+    metrics: ExecutionPlanMetricsSet,
+}
+```

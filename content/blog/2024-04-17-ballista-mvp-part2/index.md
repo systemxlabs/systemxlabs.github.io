@@ -51,6 +51,7 @@ ShuffleWriterExec: None
           UnresolvedShuffleExec
           UnresolvedShuffleExec
 ```
+1. ResolvedStage 代表当前 stage 可以立即执行，UnResolvedStage 代表当前 stage 依赖的前置 stage 还没执行完毕。
 
 在 stage1 和 stage2 执行完毕后，stage3 会更新成如下
 ```
@@ -108,3 +109,17 @@ pub struct ShuffleReaderExec {
     metrics: ExecutionPlanMetricsSet,
 }
 ```
+1. 对于 partition 数据在本地的，直接从本地磁盘读取
+2. 对于 partition 数据在其他 executor 上的，通过 Flight 协议流式读取
+
+**UnresolvedShuffleExec 算子**
+```
+pub struct UnresolvedShuffleExec {
+    pub stage_id: usize,
+    pub schema: SchemaRef,
+    pub output_partition_count: usize,
+}  
+```
+主要起到占位符作用，等前置 stage 执行完毕后，UnresolvedShuffleExec 算子会被实际的 ShuffleReaderExec 算子替换。
+
+

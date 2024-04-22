@@ -99,8 +99,8 @@ pub struct ShuffleWriterExec {
 
 1. work_dir 在生成分布式执行计划时为空，等到实际执行时，会被替换为 executor 的 work_dir。
 2. 最终每个 stage 输出的每个 partition 数据以 Arrow IPC 格式存储
-    - 当不做 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<partition>/data.arrow`
-    - 当需要 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<output_partition>/data-<input_partition>.arrow`
+    - 当 ShuffleWriterExec 不做 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<partition>/data.arrow`
+    - 当 ShuffleWriterExec 需要 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<output_partition>/data-<input_partition>.arrow`
 
 **ShuffleReaderExec 算子**
 ```rust

@@ -1,7 +1,6 @@
 +++
 title = "Ballista 分布式查询引擎 - 分布式执行计划"
 date = 2024-04-19
-draft = false
 +++
 
 ## 生成分布式执行计划

@@ -1,6 +1,6 @@
 +++
 title = "Ballista 分布式查询引擎 - 分布式执行计划"
-date = 2024-04-19
+date = 2024-04-20
 +++
 
 ## 生成分布式执行计划
@@ -96,7 +96,7 @@ pub struct ShuffleWriterExec {
 }  
 ```
 
-1. work_dir 在生成分布式执行计划时为空，等到实际执行时，会被替换为 executor 的 work_dir。
+1. work_dir 在生成分布式执行计划时为空，等到实际执行时，会被替换为 Executor 的 work_dir。
 2. 最终每个 stage 输出的每个 partition 数据以 Arrow IPC 格式存储
     - 当 ShuffleWriterExec 不做 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<partition>/data.arrow`
     - 当 ShuffleWriterExec 需要 repartition 时，数据存储在 `<work_dir>/<job_id>/<stage_id>/<output_partition>/data-<input_partition>.arrow`
@@ -115,7 +115,7 @@ pub struct ShuffleReaderExec {
 }
 ```
 1. 对于 partition 数据在本地的，直接从本地磁盘读取
-2. 对于 partition 数据在其他 executor 上的，通过 Flight 协议流式读取
+2. 对于 partition 数据在其他 Executor 上的，通过 Flight 协议流式读取
 
 **UnresolvedShuffleExec 算子**
 ```

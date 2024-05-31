@@ -1,7 +1,6 @@
 +++
 title = "DataFusion 查询引擎 TreeNode API"
 date = 2024-05-23
-draft = false
 +++
 
 数据库系统中有很多树形数据结构（如逻辑计划、表达式、物理计划），经常需要对这些树形结构遍历来进行检查（Inspecting）或者变换（Transforming），因此设计一个好的 API 可以事半功倍。DataFusion 中的 TreeNode API 设计具有很好的扩展性，其中的具体实现巧妙地利用了多种递归技巧，非常值得研究。
@@ -37,7 +36,7 @@ pub struct Transformed<T> {
 - `apply_children` 接收一个 f 函数，将 f 函数应用到其每个子节点上，对每个子节点进行检查，直至 f 函数在某个子节点上返回 `TreeNodeRecursion::Stop` 指令，最终返回最后一次 f 函数执行的结果
 - `map_children` 接收一个 f 函数，将 f 函数应用到其每个子节点上，对每个子节点进行变换，直至 f 函数在某个子节点上返回 `TreeNodeRecursion::Stop` 指令，最终返回更新后的父节点
 
-## 默认检查 API
+## 检查 API
 ```rust
 pub trait TreeNode: Sized {
     fn apply<'n, F: FnMut(&'n Self) -> Result<TreeNodeRecursion, DataFusionError>>(
@@ -77,7 +76,7 @@ impl TreeNodeRecursion {
 
 ![apply-api](./datafusion-treenode-apply.drawio.png)
 
-## 默认变换 API
+## 变换 API
 ```rust
 pub trait TreeNode: Sized {
     fn transform_down<F: FnMut(Self) -> Result<Transformed<Self>, DataFusionError>>(

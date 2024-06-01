@@ -3,7 +3,7 @@ title = "DataFusion 查询引擎 TreeNode APIs"
 date = 2024-05-23
 +++
 
-数据库系统中有很多树形数据结构（如逻辑计划、表达式、物理计划），经常需要对这些树形结构遍历来进行检查（Inspecting）或者变换（Transforming），因此设计一个好的 API 可以事半功倍。DataFusion 中的 TreeNode APIs 设计具有很好的扩展性，其中的具体实现巧妙地利用了多种递归技巧，非常值得研究。
+数据库系统中有很多树形数据结构（如逻辑计划、表达式、物理计划），经常需要对这些树形结构遍历来进行检查（Inspecting）或者变换（Transforming），因此设计一个好的 API 可以事半功倍。DataFusion 中的 [TreeNode APIs] 设计具有很好的扩展性，其中的具体实现巧妙地利用了多种递归技巧，非常值得研究。
 
 ## 底层 API
 ```rust
@@ -137,8 +137,10 @@ impl<T> Transformed<T> {
 ![transform_up-api](./datafusion-treenode-transform_up.drawio.png)
 
 ## 验证
-自定义树节点并实现 TreeNode APIs
+自定义树节点并实现 [TreeNode APIs]
 ```rust
+// 依赖 datafusion = { git = "https://github.com/apache/datafusion.git", rev = "100b30e13583badc5aa9e88861d63feb80876c5e" }
+
 struct MyNode {
     no: i32,
     children: Vec<MyNode>,
@@ -251,3 +253,5 @@ fn test_transform_up() {
 // transformed node: 4 -> 40
 // transformed node: 2 -> 20
 ```
+
+[TreeNode APIs]: https://docs.rs/datafusion/38.0.0/datafusion/common/tree_node/trait.TreeNode.html

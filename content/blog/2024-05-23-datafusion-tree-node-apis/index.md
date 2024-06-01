@@ -131,7 +131,7 @@ impl<T> Transformed<T> {
 
 在 `Transformed::transform_parent` 方法中，接收一个 f 函数来对当前节点进行变换
 1. 如果是 `TreeNodeRecursion::Continue` 指令，则应用 f 函数给当前节点
-2. 如果是 `TreeNodeRecursion::Jump` 指令，则跳过后续所有非叶节点，直至遇到叶节点开始继续遍历
+2. 如果是 `TreeNodeRecursion::Jump` 指令，则跳过后续所有非叶节点，直至遇到叶节点开始继续遍历（在叶节点执行 `map_children` 会返回 `TreeNodeRecursion::Continue` 指令）
 3. 如果是 `TreeNodeRecursion::Stop` 指令，则直接停止整个树遍历（Stop 指令会向上传递）
 
 ![transform_up-api](./datafusion-treenode-transform_up.drawio.png)
@@ -192,48 +192,11 @@ impl TreeNode for MyNode {
 ```
 
 构建一棵树
-```rust
-//        1
-//        2
-//    3       4
-//  5   6   7   8
-
-fn build_tree() -> MyNode {
-    MyNode {
-        no: 1,
-        children: vec![MyNode {
-            no: 2,
-            children: vec![
-                MyNode {
-                    no: 3,
-                    children: vec![
-                        MyNode {
-                            no: 5,
-                            children: vec![],
-                        },
-                        MyNode {
-                            no: 6,
-                            children: vec![],
-                        },
-                    ],
-                },
-                MyNode {
-                    no: 4,
-                    children: vec![
-                        MyNode {
-                            no: 7,
-                            children: vec![],
-                        },
-                        MyNode {
-                            no: 8,
-                            children: vec![],
-                        },
-                    ],
-                },
-            ],
-        }],
-    }
-}
+```
+        1
+        2
+    3       4
+  5   6   7   8
 ```
 
 测试 `apply` API
@@ -266,23 +229,25 @@ fn test_apply() {
 #[test]
 fn test_transform_up() {
     let root = build_tree();
-    root.transform_up(|node| {
-        println!("accessed node: {}", node.no);
-        if node.no == 2 {
-            Ok(Transformed::new(node, false, TreeNodeRecursion::Stop))
-        } else if node.no == 6 {
-            Ok(Transformed::new(node, false, TreeNodeRecursion::Jump))
+    root.transform_up(|mut node| {
+        let old_no = node.no;
+        node.no = old_no * 10;
+        println!("transformed node: {} -> {}", old_no, node.no);
+        if old_no == 2 {
+            Ok(Transformed::new(node, true, TreeNodeRecursion::Stop))
+        } else if old_no == 6 {
+            Ok(Transformed::new(node, true, TreeNodeRecursion::Jump))
         } else {
-            Ok(Transformed::new(node, false, TreeNodeRecursion::Continue))
+            Ok(Transformed::new(node, true, TreeNodeRecursion::Continue))
         }
-    }).unwrap();
+    });
 }
 
 // 输出
-// accessed node: 5
-// accessed node: 6
-// accessed node: 7
-// accessed node: 8
-// accessed node: 4
-// accessed node: 2
+// transformed node: 5 -> 50
+// transformed node: 6 -> 60
+// transformed node: 7 -> 70
+// transformed node: 8 -> 80
+// transformed node: 4 -> 40
+// transformed node: 2 -> 20
 ```

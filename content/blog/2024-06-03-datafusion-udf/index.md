@@ -12,6 +12,10 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
 
     fn name(&self) -> &str;
 
+    fn aliases(&self) -> &[String] {
+        &[]
+    }
+
     fn display_name(&self, args: &[Expr]) -> Result<String> {
         let names: Vec<String> = args.iter().map(create_name).collect::<Result<_>>()?;
         Ok(format!("{}({})", self.name(), names.join(",")))
@@ -27,10 +31,6 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
     ) -> Result<DataType>;
 
     fn invoke(&self, args: &[ColumnarValue]) -> Result<ColumnarValue>;
-
-    fn aliases(&self) -> &[String] {
-        &[]
-    }
 
     fn simplify(
         &self,
@@ -70,13 +70,19 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
 
 返回 Any 动态类型。
 
-可以在运行时通过类型来判断函数具体是哪种，比如 `func.as_any().downcast_ref::<LogFunc>().is_some()`。
+可以在运行时通过类型来判断函数具体是哪种，比如 `func.as_any().downcast_ref::<LogFunc>().is_some()` 来判断是否为 `LogFunc`。
 
 ## `fn name(&self) -> &str`
 
 返回函数名称，如 `abs`。
 
 函数名称会被作为函数唯一标识注册到 FunctionRegistry 中。
+
+## `fn aliases(&self) -> &[String]`
+
+返回函数的所有别名。
+
+每个别名也会作为唯一标识注册 FunctionRegistry 中，其对应的均是同一个 UDF 实例。
 
 ## `fn display_name(&self, args: &[Expr]) -> Result<String>`
 
@@ -97,19 +103,13 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
 
 返回函数的返回类型。
 
-返回类型可能是动态变化的，比如 `arrow_cast(x, 'Int16') --> Int16` 和 `arrow_cast(x, 'Float32') --> Float32`。
+返回类型可能是动态变化的，比如 `arrow_cast(x, 'Int16')` 和 `arrow_cast(x, 'Float32')` 会返回不同的类型。
 
 ## `fn invoke(&self, args: &[ColumnarValue]) -> Result<ColumnarValue>`
 
 调用函数，返回执行结果。
 
-输入的是每个参数列的 Array（包含多行），返回结果列的 Array，行数量必须跟参数的行数量一致。
-
-## `fn aliases(&self) -> &[String]`
-
-返回函数的所有别名。
-
-每个别名也会作为唯一标识注册 FunctionRegistry 中。
+因为是向量化执行，输入的是每个参数列的 Array（包含多行），返回结果列的 Array，行数量必须跟参数的行数量一致。
 
 ## `fn simplify(&self, args: Vec<Expr>, info: &dyn SimplifyInfo) -> Result<ExprSimplifyResult>`
 
@@ -136,14 +136,32 @@ from t;
 
 ## `fn evaluate_bounds(&self, input: &[&Interval]) -> Result<Interval>`
 
+根据子表达式是输入区间，计算函数的输出区间。比如 `abs(a)` 的子表达式 `a` 的区间为 `[-3, 2]`，则输出区间为 `[0, 3]`。默认实现返回无穷的区间。
 
+TODO 用例
 
 ## `fn propagate_constraints(&self, interval: &Interval, inputs: &[&Interval]) -> Result<Option<Vec<Interval>>>`
+
+
 
 ## `fn output_ordering(&self, inputs: &[ExprProperties]) -> Result<SortProperties>`
 
 ## `fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>>`
 
-## UDF 如何序列化？
+对于入参类型为用户自定义类型时，在运行时拿到实际入参类型，返回需要强制转换后的入参类型。
+
+DataFusion 会将入参强制转换为这些类型，然后再执行 UDF 的 `invoke` 方法。
+
+比如 `make_array(expression1[, ..., expression_n])` 
+TODO
+
+## UDF 如何序列化和反序列化？
+在分布式下，需要通过网络将执行计划传给其他节点执行，其中需要对 UDF 进行序列化和反序列化。
+
+DataFusion 提供了两种方式对 UDF 进行序列化和反序列化
+1. 只传输 UDF 名称，在反序列化时从 FunctionRegistry 通过名称拿到实际的 UDF，这需要 UDF 在两个节点上的 FunctionRegistry 均被注册
+2. 用户自定义 UDF 序列化和反序列化方法
+
+DataFusion 会优先使用用户自定义的序列化和反序列化方法，如果用户未实现，则 fallback 到使用 UDF 名称方案。
 
 [ScalarUDFImpl]: https://docs.rs/datafusion/38.0.0/datafusion/logical_expr/trait.ScalarUDFImpl.html

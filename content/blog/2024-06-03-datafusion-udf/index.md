@@ -136,15 +136,27 @@ from t;
 
 ## `fn evaluate_bounds(&self, input: &[&Interval]) -> Result<Interval>`
 
-根据子表达式是输入区间，计算函数的输出区间。比如 `abs(a)` 的子表达式 `a` 的区间为 `[-3, 2]`，则输出区间为 `[0, 3]`。默认实现返回无穷的区间。
+根据子表达式是输入区间，计算函数的输出区间。
 
-TODO 用例
+比如 `abs(a)` 的子表达式 `a` 的区间为 `[-3, 2]`，则输出区间为 `[0, 3]`。默认实现返回无穷的区间。
+
+在 Filter 算子中，会根据谓词和输入算子的统计数据，计算列的边界值（min/max/distinct_count），根据前后变化计算选择率（selectivity）。
 
 ## `fn propagate_constraints(&self, interval: &Interval, inputs: &[&Interval]) -> Result<Option<Vec<Interval>>>`
 
+根据自身的输出区间，以及子表达式的区间，重新计算子表达式的可能区间（被进一步缩小）。
 
+比如 `abs(num)` 自身输出区间为 `[4, 5]`，而子表达式区间为 `[-7, 3]`，可以计算出子表达式只能在 `[-5, 3]` 区间内。
+
+在 Filter 算子中，谓词的取值区间在 `[true, true]`，会以此为限制区间向下传播，更新每个子表达式的取值区间。
 
 ## `fn output_ordering(&self, inputs: &[ExprProperties]) -> Result<SortProperties>`
+
+根据子表达式的排序属性，返回输出的排序属性。
+
+比如 `cos(num)` 输出的排序属性是 `Unordered`，`radians(num)`（将度数转为弧度）输出的排序属性跟第一个子表达式保持一致，即为 `input[0].sort_properties`。
+
+这些排序属性会作为等价属性（EquivalenceProperties）一部分，在 Join、Sort 等优化中使用。
 
 ## `fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>>`
 
@@ -152,8 +164,7 @@ TODO 用例
 
 DataFusion 会将入参强制转换为这些类型，然后再执行 UDF 的 `invoke` 方法。
 
-比如 `make_array(expression1[, ..., expression_n])` 
-TODO
+比如 `make_array(expression1[, ..., expression_n])` 会找出入参类型中最大的类型，然后将每个入参强制转换为此类型。例如 `make_array(1, 2.2)` 会将每个入参转换为 Float64 类型。
 
 ## UDF 如何序列化和反序列化？
 在分布式下，需要通过网络将执行计划传给其他节点执行，其中需要对 UDF 进行序列化和反序列化。

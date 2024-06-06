@@ -76,13 +76,13 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
 
 返回函数名称，如 `abs`。
 
-函数名称会被作为函数唯一标识注册到 FunctionRegistry 中。
+函数名称会被作为函数唯一标识注册到 `FunctionRegistry` 中。
 
 ## `fn aliases(&self) -> &[String]`
 
 返回函数的所有别名。
 
-每个别名也会作为唯一标识注册 FunctionRegistry 中，其对应的均是同一个 UDF 实例。
+每个别名也会作为唯一标识注册 `FunctionRegistry` 中，其对应的均是同一个 UDF 实例。
 
 ## `fn display_name(&self, args: &[Expr]) -> Result<String>`
 
@@ -164,13 +164,13 @@ from t;
 
 DataFusion 会将入参强制转换为这些类型，然后再执行 UDF 的 `invoke` 方法。
 
-比如 `make_array(expression1[, ..., expression_n])` 会找出入参类型中最大的类型，然后将每个入参强制转换为此类型。例如 `make_array(1, 2.2)` 会将每个入参转换为 Float64 类型。
+比如 `make_array(expression1[, ..., expression_n])` 会找出入参类型中最大的类型，然后将每个入参强制转换为此类型。例如 `make_array(1, 2.2)` 会将每个入参转换为 `Float64` 类型。
 
 ## UDF 如何序列化和反序列化？
 在分布式下，需要通过网络将执行计划传给其他节点执行，其中需要对 UDF 进行序列化和反序列化。
 
 DataFusion 提供了两种方式对 UDF 进行序列化和反序列化
-1. 只传输 UDF 名称，在反序列化时从 FunctionRegistry 通过名称拿到实际的 UDF，这需要 UDF 在两个节点上的 FunctionRegistry 均被注册
+1. 只传输 UDF 名称，在反序列化时从 `FunctionRegistry` 通过名称拿到实际的 UDF，这需要 UDF 在两个节点上的 `FunctionRegistry` 均被注册
 2. 用户自定义 UDF 序列化和反序列化方法
 
 DataFusion 会优先使用用户自定义的序列化和反序列化方法，如果用户未实现，则 fallback 到使用 UDF 名称方案。

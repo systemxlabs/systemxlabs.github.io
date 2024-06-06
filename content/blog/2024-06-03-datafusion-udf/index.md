@@ -94,10 +94,10 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
 
 返回函数入参类型和易变性（Volatility）
 - 入参类型支持固定、变长参数、任意参数等等，还可以在运行时指定参数（使用 `coerce_types` 方法）
-- 易变性包括 Immutable、Stable、Volatile 三种，主要用在判断是否为常量表达式时，比如 `abs(10)`，可以直接在 planning 期间进行求值
-  - Immutable：给定输入只会有一种输出，比如 `abs(num)`
-  - Stable：给定输入，在同一查询内只会有一种输出，但在不同查询间可能会有不同的输出，比如 `current_time()`
-  - Volatile：每次执行时均可能产生不同的输出，比如 `random()`
+- 易变性包括三种，主要用在判断是否为常量表达式时，比如 `abs(10)`，可以直接在 planning 期间进行求值
+  - `Immutable`：给定输入只会有一种输出，比如 `abs(num)`
+  - `Stable`：给定输入，在同一查询内只会有一种输出，但在不同查询间可能会有不同的输出，比如 `current_time()`
+  - `Volatile`：每次执行时均可能产生不同的输出，比如 `random()`
 
 ## `fn return_type_from_exprs(&self, args: &[Expr], schema: &dyn ExprSchema, arg_types: &[DataType]) -> Result<DataType>`
 

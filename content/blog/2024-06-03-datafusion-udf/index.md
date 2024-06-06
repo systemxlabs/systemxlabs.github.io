@@ -154,7 +154,7 @@ from t;
 
 根据子表达式的排序属性，返回输出的排序属性。
 
-比如 `cos(num)` 输出的排序属性是 `Unordered`，`radians(num)`（将度数转为弧度）输出的排序属性跟第一个子表达式保持一致，即为 `input[0].sort_properties`。
+比如 `cos(num)` 输出的排序属性是 `Unordered`，`radians(num)`（将度数转为弧度）输出的排序属性跟输入保持一致，即为 `input[0].sort_properties`。
 
 这些排序属性会作为等价属性（EquivalenceProperties）一部分，在 Join、Sort 等优化中使用。
 

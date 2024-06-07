@@ -126,7 +126,7 @@ pub trait ScalarUDFImpl: Debug + Send + Sync {
 在[公共子表达式消除](https://en.wikipedia.org/wiki/Common_subexpression_elimination)优化中，如果函数是短路的，则会跳过不做优化。
 
 比如在如下 SQL 中（已做简化，原例子参考[issue-8848](https://github.com/apache/datafusion/issues/8814)），
-```
+```sql
 select 
 case when a > 0 then c / a else 0 end,
 case when a > 0 and b > 0 then c / a else 0 end

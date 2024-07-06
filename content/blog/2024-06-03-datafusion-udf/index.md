@@ -3,7 +3,7 @@ title = "DataFusion 查询引擎 UDF 设计"
 date = 2024-06-03
 +++
 
-UDF 是指用户自定义标量函数（Scalar User Defined Functions），函数为输入的每一行生成一行输出。DataFusion 中使用 [ScalarUDFImpl] trait 对 UDF 进行抽象，用户 UDF 只需实现该 trait 并将其注册到 SessionContext 即可使用。
+UDF 是指用户自定义标量函数（Scalar User Defined Functions），函数为输入的每一行生成一行输出。DataFusion 中使用 [ScalarUDFImpl] trait 对 UDF 进行抽象，用户 UDF 只需实现该 trait 并将其注册到 SessionContext 即可使用。DataFusion 内置标量函数和用户 UDF 均使用同一套 API [ScalarUDFImpl] 实现。
 
 ```rust
 // 移除了部分兼容性代码（看起来会更简洁）

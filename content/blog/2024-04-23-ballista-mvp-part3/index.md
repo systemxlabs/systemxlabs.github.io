@@ -36,7 +36,7 @@ pub trait EventAction<E>: Send + Sync {
     fn on_error(&self, error: BallistaError);
 }
 ```
-1. 事件循环在启动时，会创建一个多生产者单消费者的有界事件队列，并启动一个异步任务去不断轮询事件队列消费端，直至收到 stop 信号。
+1. 事件循环在启动时，会创建一个多生产者单消费者的有界事件队列，并启动一个异步任务去不断轮询事件队列消费端，直至收到 stop 信号
 2. 事件均通过生产者往队列发送
 
 **一个 SQL 执行中的事件驱动过程**
@@ -58,4 +58,4 @@ pub trait EventAction<E>: Send + Sync {
 8. 当接收到 JobUpdated 事件时，更新共享 kv 中分布式执行计划
 9. 当接收到 JobRunningFailed 事件时，更新共享 kv 中分布式执行计划，发送 CancelTasks 事件，向 Executor 集群发送清除 job 中间执行结果的请求，然后一段时间后从共享 kv 中移除该 job
 10. 当接收到 CancelTasks 事件时，向 Executor 集群发送取消 task 执行的请求
-11. 当接收到 JobFinished 事件时，更新共享 kv 中分布式执行计划，一段事件后向 Executor 集群发送清除 job 中间执行结果的请求，然后从共享 kv 中移除该 job
+11. 当接收到 JobFinished 事件时，更新共享 kv 中分布式执行计划，一段时间后向 Executor 集群发送清除 job 中间执行结果的请求，然后从共享 kv 中移除该 job

@@ -51,12 +51,11 @@ pub trait EventAction<E>: Send + Sync {
 4. 当接收到 JobSubmitted 事件时，发送 ReviveOffers 事件
 5. 当接收到 ReviveOffers 事件时，遍历所有正在执行中的 job，生成 task 并发送给 Executor 集群
 6. 当接收到 Executor 发送的任务状态更新时，发送 TaskUpdating 事件
-7. 当接收到 TaskUpdating 事件时，释放集群计算资源，更新整个分布式执行计划的 stage 状态（Running -> Successful/Failed, Unresolved -> Resolved等），并发送 ReviveOffers 事件
+7. 当接收到 TaskUpdating 事件时，释放集群计算资源，更新整个分布式执行计划的 stage 状态（Running -> Successful, Unresolved -> Resolved等），并发送 ReviveOffers 事件
     - 如果有 stage 从 Unsolved 状态变更为 Resolved 状态，则发送 JobUpdated 事件
-    - 如果有 stage 需要回滚成 Unsolved 状态（如 ShuffleReaderExec 执行时读取远程 partition 数据时失败），则发送 CancelTasks 事件
     - 如果有 stage 执行失败，则修改 job 状态为失败，并发送 JobRunningFailed 事件
     - 如果所有 stage 均执行成功，则修改 job 状态为成功，并发送 JobFinished 事件
 8. 当接收到 JobUpdated 事件时，更新共享 kv 中分布式执行计划
-9. 当接收到 CancelTasks 事件时，向 Executor 集群发送取消 task 执行的请求
-10. 当接收到 JobRunningFailed 事件时，更新共享 kv 中分布式执行计划，发送 CancelTasks 事件，向 Executor 集群发送清除 job 中间执行结果的请求，然后一段时间后从共享 kv 中移除该 job
+9. 当接收到 JobRunningFailed 事件时，更新共享 kv 中分布式执行计划，发送 CancelTasks 事件，向 Executor 集群发送清除 job 中间执行结果的请求，然后一段时间后从共享 kv 中移除该 job
+10. 当接收到 CancelTasks 事件时，向 Executor 集群发送取消 task 执行的请求
 11. 当接收到 JobFinished 事件时，更新共享 kv 中分布式执行计划，一段事件后向 Executor 集群发送清除 job 中间执行结果的请求，然后从共享 kv 中移除该 job

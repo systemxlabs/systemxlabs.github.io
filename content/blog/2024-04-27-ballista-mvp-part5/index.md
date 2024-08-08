@@ -8,7 +8,7 @@ date = 2024-04-27
 ![ballista-mvp-executor](./ballista-mvp-executor.drawio.png)
 
 Executor 节点启动时
-1. 启动 ExecutorGrpc 服务，负责接收 Scheduler 节点发送的任务和其他指令。
+1. 启动 ExecutorGrpc 服务，负责接收 Scheduler 节点发送的任务和其他指令
 2. 启动 Flight 服务，Client 和其他 Executor 通过 Flight 协议读取本机执行结果数据
 3. 向 Scheduler 注册
 4. 启动心跳任务，定时向所有 Scheduler 节点发送心跳

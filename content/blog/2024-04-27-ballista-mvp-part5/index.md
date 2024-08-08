@@ -20,14 +20,10 @@ Executor 执行的基本单元是 Task，一个 Task 会执行一个 Job 内的�
 pub struct TaskDefinition {
     /// 在执行图中的唯一的（单调递增）
     pub task_id: usize,
-    /// task 执行次数
-    pub task_attempt_num: usize,
     /// 所属 job
     pub job_id: String,
     /// 所属 stage
     pub stage_id: usize,
-    /// stage 执行次数
-    pub stage_attempt_num: usize,
     /// partition
     pub partition_id: usize,
     /// stage 执行计划

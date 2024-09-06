@@ -77,28 +77,40 @@ DataFusion 支持多种聚合方案，在不同情况下会选择最优方案。
         6. 直至输入数据读取完毕，然后输出所有剩余结果，随即此阶段完成
 
 ### 利用输入的排序特性
-DataFusion 会利用聚合算子输入的（部分/完全）排序特性，来加速聚合计算。
+DataFusion 会利用聚合算子输入在 group keys 上的（部分/完全）排序特性，来加速聚合计算。
 
 假如聚合算子输入按照 group keys `a` 和 `b` 完全排序，
 
 ![](./datafusion-aggregation-full-group-ordering.drawio.png)
 
-当出现新的 group 值时，说明前面的 group 已经聚合完毕，不会再有新的行出现，此时我们可以将前面 group 计算的聚合结果发送到下一阶段算子。
+当出现新的 group 值时，说明前面的 group 已经聚合完毕，不会再有新的行出现，此时我们可以将前面 group 聚合计算结果发送到下一阶段算子。
 
+### 跳过第一阶段聚合
 
-三种情况
-1. no group
-2. group + limit => topk
-3. group
+TODO
+
+### TopK 聚合
+当查询（`... order by xxx limit xxx`）满足特定条件时，[优化规则](https://github.com/apache/datafusion/blob/a4445283dbff1b74a6b4d9ecfa1016857dc6207e/datafusion/core/src/physical_optimizer/topk_aggregation.rs)会将 limit 下推到 Aggregate 算子，在执行时会直接走 TopK 聚合计算，采用一种[Map和优先队列的组合结构](https://github.com/apache/datafusion/blob/a4445283dbff1b74a6b4d9ecfa1016857dc6207e/datafusion/physical-plan/src/aggregates/topk/priority_map.rs)，避免在内存中维护巨大的哈希表，减少内存占用以及计算量。
+
+### 其他一些问题
+
+**为什么 Spill（溢出到磁盘）仅发生在第二阶段（FinalPartitioned），而不会在第一阶段（Partial）发生？**
+
+Spill 是一个耗时的操作，涉及到磁盘 IO 和排序，而且对于高基数聚合（group 非常分散），很可能在第二阶段仍需要 Spill。所以通常的做法是在第一阶段内存不足时将内存中数据提前输出到第二阶段（early emit），在第二阶段内存不足时采用 Spill 溢出到磁盘。
+
+**为什么 Spill（溢出到磁盘）之前需要对数据按照 group keys 进行排序？**
+
+如果发生 Spill，说明数据量过大内存不足，无法在内存中对数据进行分组，唯一的方式就是进行流式地 `读取-聚合-输出`。所以我们提前对 Spill 到磁盘的数据进行排序，在流式读取所有磁盘文件时执行合并（stream merge），利用完全排序特性，可以流式地输出一组组聚合结果。
+
+**第一阶段判断是否跳过聚合直接输出中间聚合结果时，为什么需要输入无任何 group keys 的排序特性？**
+
+TODO
 
 问题：
 1. 如何向量化执行的
 2. 内部hash表结构
-3. 为什么没有在 partial 阶段 spill？
 4. 如果是 full group ordering，但还没到 new group value出现时，spill到了磁盘，后续 group_ordering.emit_to() 如何保证正确性？
-5. 跳过聚合， 为什么必须 group ordering 为 none
-6. 为什么spill时需要按照 group keys 排序？
 
 
-参考
-1. https://arrow.apache.org/blog/2023/08/05/datafusion_fast_grouping/
+参考资料
+1. [Aggregating Millions of Groups Fast in Apache Arrow DataFusion](https://arrow.apache.org/blog/2023/08/05/datafusion_fast_grouping/)

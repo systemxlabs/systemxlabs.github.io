@@ -1,7 +1,6 @@
 +++
 title = "DataFusion 两阶段并行哈希分组聚合"
 date = 2024-08-23
-draft = true
 +++
 
 分组聚合功能是任何分析引擎的核心功能，可在海量数据上创建出可以理解的摘要。DataFusion 分析引擎采用了先进的两阶段并行哈希分组聚合技术，高度并行且向量化执行。
@@ -56,7 +55,17 @@ DataFusion 支持多种聚合方案，在不同情况下会选择最优方案。
 5. 如果内存充足，则最后将整个内存中的哈希表，计算最终聚合结果并输出到下一算子
 
 ### 内存中的哈希表
-TODO
+![](./datafusion-aggregation-hashtable.drawio.png)
+
+以上在逻辑上形成一个哈希表，但物理上并非直接使用哈希表存储 group 到聚合状态的映射。实际上哈希表维护的是 group 值到 group 索引的映射，哈希表负责分配 group 索引，而另外有一个 `Accumulator组` 的数据结构来维护每个 group 的聚合状态，每个 group 索引会对应其中一个 Accumulator。
+
+在接收一批数据时，先由哈希表来计算这批数据每行对应的 group 索引（可能是已存在的，也可能会分配一个新的），然后将这批数据和对应的 group 索引发送给 `Accumulator组` 来进行聚合状态更新。
+
+`Accumulator组` 在更新前会利用 Arrow 计算内核对数据进行一个高效地重排，以便在更新聚合状态时，可以被编译器很好地向量化（SIMD加速）。
+
+![](./datafusion-aggregation-reorder-accumulator-input.drawio.png)
+
+利用类似 `Vec` 连续内存存储，尽可能减少内存分配，尽可能类型特化，可以最大化提高聚合计算效率。
 
 ### 利用输入的排序特性
 DataFusion 会利用聚合算子的输入在 group keys 上的（部分/完全）排序特性，来加速聚合计算。
@@ -87,12 +96,6 @@ Spill 是一个耗时的操作，涉及到磁盘 IO 和排序，而且对于高�
 **第一阶段判断是否跳过聚合直接输出中间聚合结果时，为什么需要输入无任何 group keys 的排序特性？**
 
 因为如果输入具有排序特性，那么可以利用排序特性来提前输出已聚合完毕的 group，这样不会因为高基数聚合导致需要在内存中维护巨大的哈希表。
-
-问题：
-1. 如何向量化执行的
-2. 内部hash表结构
-4. 如果是 full group ordering，但还没到 new group value出现时，spill到了磁盘，后续 group_ordering.emit_to() 如何保证正确性？
-
 
 参考资料
 1. [Aggregating Millions of Groups Fast in Apache Arrow DataFusion](https://arrow.apache.org/blog/2023/08/05/datafusion_fast_grouping/)

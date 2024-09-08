@@ -59,13 +59,18 @@ DataFusion 支持多种聚合方案，在不同情况下会选择最优方案。
 
 以上在逻辑上形成一个哈希表，但物理上并非直接使用哈希表存储 group 到聚合状态的映射。实际上哈希表维护的是 group 值到 group 索引的映射，哈希表负责分配 group 索引，而另外有一个 `Accumulator组` 的数据结构来维护每个 group 的聚合状态，每个 group 索引会对应其中一个 Accumulator。
 
-在接收一批数据时，先由哈希表来计算这批数据每行对应的 group 索引（可能是已存在的，也可能会分配一个新的），然后将这批数据和对应的 group 索引发送给 `Accumulator组` 来进行聚合状态更新。
+在接收一批数据时，先由哈希表来计算这批数据每行对应的 group 索引（可能是已存在的，也可能会分配一个新的），然后将这批数据和每行对应的 group 索引发送给 `Accumulator组` 来进行聚合状态更新。
 
 `Accumulator组` 在更新前会利用 Arrow 计算内核对数据进行一个高效地重排，以便在更新聚合状态时，可以被编译器很好地向量化（SIMD加速）。
 
 ![](./datafusion-aggregation-reorder-accumulator-input.drawio.png)
 
 利用类似 `Vec` 连续内存存储，尽可能减少内存分配，尽可能类型特化，可以最大化提高聚合计算效率。
+
+### group 在分区上的分布
+![](./datafusion-aggregation-group-distribution.drawio.png)
+
+在第一阶段，每个分区上都可能存在任意的 group，在进入第二阶段前，会按照 group keys 进行重新分区，因此在第二阶段，每个分区上的 group 不会存在重叠。
 
 ### 利用输入的排序特性
 DataFusion 会利用聚合算子的输入在 group keys 上的（部分/完全）排序特性，来加速聚合计算。

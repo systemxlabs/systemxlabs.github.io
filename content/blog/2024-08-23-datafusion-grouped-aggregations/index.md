@@ -1,5 +1,5 @@
 +++
-title = "DataFusion 两阶段并行哈希分组聚合"
+title = "DataFusion 查询引擎两阶段并行哈希分组聚合"
 date = 2024-08-23
 +++
 

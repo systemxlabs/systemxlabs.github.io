@@ -10,7 +10,7 @@ draft = true
 ![](./smol-crates-dependency-graph.drawio.png)
 
 - [polling]: 提供一个在 epoll / kqueue / iocp 等之上的统一接口
-- [async-lock]: 提供异步环境基本的同步原语，包含 Mutex / RwLock 等
+- [parking]：提供线程阻塞和唤醒工具
 - [async-task]: TODO 123
 - [async-io]: TODO 123
 - [async-executor]: TODO 123
@@ -70,8 +70,33 @@ loop {
 poller.delete(&socket)?;
 ```
 
+## parking
+
+parking 提供了线程阻塞和唤醒工具（crossbeam 中有着极其相似的[实现](https://docs.rs/crossbeam-utils/0.8.20/crossbeam_utils/sync/struct.Parker.html)），类似于标准库的 [`thread::park()`](https://doc.rust-lang.org/std/thread/fn.park.html) and [`Thread::unpark()`](https://doc.rust-lang.org/std/thread/struct.Thread.html#method.unpark)，但不同的是，标准库的这套机制可以被用户代码调用，可能造成虚假的唤醒和死锁。
+
+parking 提供了 Parker 和 Unparker 两个结构，它们两两成对，主要作用是
+1. Parker 负责阻塞当前线程，Parker 没有实现 Send 和 Sync，无法传递到其他线程
+2. Unparker 负责唤醒 Parker 所在线程，Unparker 实现了 Send 和 Sync，可以在任意其他线程唤醒
+
+Parker 和 Unparker 通过 Arc 共享同一个结构 Inner，其阻塞和唤醒均在 Inner 中实现
+```rust
+struct Inner {
+    // EMPTY / NOTIFIED / PARKED
+    state: AtomicUsize,
+    lock: Mutex<()>,
+    cvar: Condvar,
+}
+```
+其核心是利用条件变量：当执行阻塞时，让条件变量[阻塞](https://doc.rust-lang.org/stable/std/sync/struct.Condvar.html#method.wait)当前线程；当执行唤醒时，则通知条件变量[唤醒](https://doc.rust-lang.org/stable/std/sync/struct.Condvar.html#method.notify_one)对应线程。
+
+## async-io
+
+
+
+
 [smol]: https://github.com/smol-rs/smol
 [polling]: https://github.com/smol-rs/polling
+[parking]: https://github.com/smol-rs/parking
 [async-lock]: https://github.com/smol-rs/async-lock
 [async-task]: https://github.com/smol-rs/async-task
 [async-io]: https://github.com/smol-rs/async-io

@@ -7,7 +7,7 @@ draft = true
 [smol] 是一个微型且快速的 Rust 异步运行时，它由许多微型的 crate 组成（比如 polling / async-io / async-executor 等），每个 crate 相对独立，非常适合学习 Rust 异步运行时是如何一步步构建的。
 
 ## crates 概览
-![](./smol-crates-dependency-graph.drawio.png)
+![](./smol-crates-overview.drawio.png)
 
 - [polling]: 提供一个在 epoll / kqueue / iocp 等之上的统一接口
 - [parking]：提供线程阻塞和唤醒工具
@@ -74,11 +74,11 @@ poller.delete(&socket)?;
 
 parking 提供了线程阻塞和唤醒工具（crossbeam 中有着极其相似的[实现](https://docs.rs/crossbeam-utils/0.8.20/crossbeam_utils/sync/struct.Parker.html)），类似于标准库的 [`thread::park()`](https://doc.rust-lang.org/std/thread/fn.park.html) and [`Thread::unpark()`](https://doc.rust-lang.org/std/thread/struct.Thread.html#method.unpark)，但不同的是，标准库的这套机制可以被用户代码调用，可能造成虚假的唤醒和死锁。
 
-parking 提供了 Parker 和 Unparker 两个结构，它们两两成对，主要作用是
-1. Parker 负责阻塞当前线程，Parker 没有实现 Send 和 Sync，无法传递到其他线程
-2. Unparker 负责唤醒 Parker 所在线程，Unparker 实现了 Send 和 Sync，可以在任意其他线程唤醒
+parking 提供了 `Parker` 和 `Unparker` 两个结构，它们两两成对，主要作用是
+1. `Parker` 负责阻塞当前线程，Parker 没有实现 Send 和 Sync，无法传递到其他线程
+2. `Unparker` 负责唤醒 `Parker` 所在线程，Unparker 实现了 Send 和 Sync，可以在任意其他线程唤醒
 
-Parker 和 Unparker 通过 Arc 共享同一个结构 Inner，其阻塞和唤醒均在 Inner 中实现
+`Parker` 和 `Unparker` 通过 Arc 共享同一个结构 Inner，其阻塞和唤醒均在 Inner 中实现
 ```rust
 struct Inner {
     // EMPTY / NOTIFIED / PARKED
@@ -91,7 +91,13 @@ struct Inner {
 
 ## async-io
 
+- driver
+- reactor
 
+API
+- block_on
+- Async
+- Timer
 
 
 [smol]: https://github.com/smol-rs/smol

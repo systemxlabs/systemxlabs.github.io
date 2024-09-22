@@ -67,11 +67,11 @@ DataFusion 采用基于 Pull 的流式执行引擎。物理计划使用一个或
 
 ## 优化
 内置实现了业界广泛使用的优化
-1. 查询重写：逻辑计划重写如谓词下推、表达式简化，物理计划重写如消除不必要排序、最大化并行度、join算法选择。
+1. 查询重写：逻辑计划重写如谓词下推、表达式简化，物理计划重写如消除不必要排序、最大化并行度、join算法选择
 2. 排序：如针对 Limit（topk）优化，内存不足时临时写入磁盘
 3. 分组和聚合优化：两阶段并行哈希分组聚合
 4. 连接：支持 hash join / merge join / symmetric hash join / nested loops join / cross join
-5. 窗口函数
+5. 窗口函数：复用排序、支持流式计算
 6. Normalized Sort Keys / RowFormat
 7. 有效利用排序顺序
 8. 下推和延迟物化

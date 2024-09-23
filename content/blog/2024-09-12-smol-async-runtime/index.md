@@ -1,7 +1,6 @@
 +++
-title = "smol 异步运行时剖析"
+title = "Rust 异步运行时 smol 剖析"
 date = 2024-09-12
-draft = true
 +++
 
 [smol] 是一个微型且快速的 Rust 异步运行时，它由许多微型的 crate 组成（比如 polling / async-io / async-executor 等），每个 crate 相对独立，非常适合学习 Rust 异步运行时是如何一步步构建的。

@@ -14,7 +14,7 @@
 
   <ul>
   {% for page in section.pages %}
-    {% if loop.index > 3 %}{% break %}{% endif %}
+    {% if loop.index > 5 %}{% break %}{% endif %}
     <li><a href="{{ page.path | safe }}">{{ page.title }}</a></li>
   {% endfor %}
   </ul>
@@ -28,7 +28,7 @@
   {% set section = get_section(path="blog/_index.md") %}
   <ul>
   {% for page in section.pages %}
-    {% if loop.index > 3 %}{% break %}{% endif %}
+    {% if loop.index > 5 %}{% break %}{% endif %}
     <li><a href="{{ page.path | safe }}">{{ page.title }}</a></li>
   {% endfor %}
   </ul>

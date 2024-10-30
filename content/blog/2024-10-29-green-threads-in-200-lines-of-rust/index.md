@@ -21,7 +21,7 @@ sp (x2) | 被调用者保存 | 栈指针寄存器，指向栈顶位置
 zero (x0) | N/A | 恒为零
 
 何为调用者保存寄存器和被调用者保存寄存器？
-- 由于每个 CPU 只有一套寄存器，函数调用前后会导致寄存器的值被覆盖，因此需要将寄存器的值提前保存到栈上，后续从栈上恢复这些寄存器的值
+- 由于每个 CPU 只有一套寄存器，函数调用前后会导致寄存器的值被覆盖，因此需要将寄存器的值提前保存到栈上，后续从栈上恢复这些寄存器的值，这个过程由函数调用者和被调用者合作完成
 - 被调用者保存 (Callee-Saved) 寄存器 ：被调用的函数可能会覆盖这些寄存器，需要被调用的函数来保存的寄存器，即由被调用的函数来保证在调用前后，这些寄存器保持不变
 - 调用者保存 (Caller-Saved) 寄存器 ：被调用的函数可能会覆盖这些寄存器，需要发起调用的函数来保存的寄存器，即由发起调用的函数来保证在调用前后，这些寄存器保持不变
 
@@ -36,24 +36,28 @@ zero (x0) | N/A | 恒为零
 - 其他被调用者保存寄存器 s1 ~ s11 
 - 函数所使用到的局部变量
 
-函数 A 调用函数 B 具体过程：
+函数 A 调用函数 B 具体完整过程（抛开编译器优化）：
 1. 函数 A 保存“调用者保存寄存器”到其栈帧内
 2. 函数 A 设置输入参数到 a0-a7 寄存器
-3. 函数 A 跳转到函数 B 入口并设置 ra 寄存器为其下一条指令地址（通常是 pc = pc + 4）
-4. 函数 B 向下移动 sp 栈指针来分配其栈帧空间
-5. 函数 B 保存“被调用者保存寄存器”到其栈帧内
-7. 函数 B 更新 fp 寄存器为其栈帧顶端地址
-6. 函数 B 从 a0-a7 寄存器读取输入参数并执行
-7. 函数 B 将返回值保存到 a0-a1 寄存器
-8. 函数 B 从其栈帧内恢复“被调用者保存寄存器”
-9. 函数 B 向上移动 sp 栈指针来回收其栈帧空间
-10. 函数 B 跳转到 ra 寄存器指向的返回地址
-11. 函数 A 从其栈帧内恢复“调用者保存寄存器”
-12. 函数 A 继续向下执行
+3. 函数 A 跳转到函数 B 入口并设置 ra 寄存器为函数 A 跳转指令的下一条指令地址（pc + 4），这个过程是一条指令完成
+4. 函数 B 向下移动 sp 栈指针来分配其栈帧空间，例如 `addi sp, sp, -64` 分配 64 字节栈帧
+5. 函数 B 保存 ra 寄存器到其栈帧内，例如 `sd  ra, 56(sp)`
+6. 函数 B 保存“被调用者保存寄存器”到其栈帧内
+7. 函数 B 更新 fp 寄存器为其栈帧顶端地址，例如 `addi fp, sp, 64`
+8. 函数 B 从 a0-a7 寄存器读取输入参数并执行（可能继续调用其他函数）
+9. 函数 B 将返回值保存到 a0-a1 寄存器
+10. 函数 B 从其栈帧内恢复 ra 寄存器，例如 `ld  ra, 56(sp)`
+11. 函数 B 从其栈帧内恢复“被调用者保存寄存器”
+12. 函数 B 向上移动 sp 栈指针来回收其栈帧空间，例如 `addi sp, sp, 64` 回收 64 字节栈帧
+13. 函数 B 跳转到 ra 寄存器指向的返回地址，例如 `jalr x0, 0(ra)`
+14. 函数 A 从其栈帧内恢复“调用者保存寄存器”
+15. 函数 A 继续向下执行
 
 更详细介绍可见[此文章](https://rcore-os.cn/rCore-Tutorial-Book-v3/chapter1/5support-func-call.html)。
 
-## 定义一个绿色线程
+注：以下线程均指绿色线程。
+
+## 定义一个线程
 ```rust
 struct Thread {
     id: usize,
@@ -87,13 +91,13 @@ pub struct ThreadContext {
     entry: u64,
 }
 ```
-一个绿色线程包含：
-1. 绿色线程 id
+一个线程包含：
+1. 线程 id
 2. 执行状态：Availabe 表示空闲，可分配新任务执行；Running 表示正在执行任务；Ready 表示已分配任务，可以被调度执行，任务可能未开始也可能被中途挂起了
 3. 函数上下文：被调用者保存寄存器，用于恢复挂起的任务继续执行；entry 是任务的入口地址，只在首次被调度时使用
 4. 栈：分配在进程对应的堆区（固定大小、不会扩容）
 
-## 定义绿色线程运行时
+## 定义线程运行时
 ```rust
 static mut RUNTIME: usize = 0;
 
@@ -125,9 +129,9 @@ impl Runtime {
     }
 }
 ```
-运行时在创建时会预创建若干绿色线程，current 代表正在执行的绿色线程
-1. 一个 base 线程，用于 Runtime 本身的执行流，此时处于 Runtime 执行流，因此状态为 Running
-2. 若干 user 线程，用于用户任务的执行流，此时没有绑定任务，因此状态均为 Available
+运行时在创建时会预创建若干线程，current 代表正在执行的线程
+1. 一个 base 线程，用于 Runtime 本身的代码执行，此时处于 Runtime 执行流，因此状态为 Running
+2. 若干 user 线程，用于用户任务的代码执行，此时没有绑定任务，因此状态均为 Available
 
 使用全局变量存储 Runtime 地址，便于后续全局访问 Runtime。
 
@@ -167,14 +171,14 @@ fn task_return() {
     }
 }
 ```
-用户任务是一个无参数的函数，创建任务就是将函数跑在绿色线程上。
+用户任务是一个无参数的函数，创建任务就是将函数跑在线程上。
 
 创建过程：
-1. 首先找到一个空闲的绿色线程，然后初始化其栈顶指针为栈空间 `Vec<u8>` 的最高地址，并确保 8 字节对齐（RISC-V64 要求 ld/sd 访存指令的数据地址是 8 字节对齐）
+1. 首先找到一个空闲的线程，然后初始化其栈顶指针为其所属栈空间 `Vec<u8>` 的最高地址，并确保 8 字节对齐（RISC-V64 要求 ld/sd 访存指令的数据地址是 8 字节对齐）
 2. 设定任务入口地址为函数 `f`
-3. 设定任务返回地址为 `task_return` 函数入口，当任务执行完毕时，会跳转到 `task_return` 地址执行，然后调用 `Runtime::t_return()` 来标记当前线程空闲，并调度/切换到下一个 ready 的线程继续执行
+3. 设定任务返回地址为 `task_return` 函数，当任务执行完毕时，会跳转到 `task_return` 地址执行，然后调用 `Runtime::t_return()` 来标记当前线程空闲，并调度/切换到下一个 ready 的线程继续执行
 
-## 调度绿色线程
+## 调度线程
 ```rust
 impl Runtime {
     pub fn run(&mut self) {
@@ -219,11 +223,11 @@ pub fn r#yield() {
 ```
 
 1. `t_schedule` 方法：用于寻找下一个 ready 的线程并从当前线程切换过去
-2. `t_yield` 方法：用于挂起当前线程，并调用 `t_schedule` 方法切到下一个 ready 线程
-3. `run` 方法：启动 Runtime，循环调用 `t_yield` 来挂起当前线程（base thread），并通过 `t_schedule` 来切换到下一个 ready 线程，如果切换失败，则表面任务均已执行完毕
+2. `t_yield` 方法：用于挂起当前线程，并调用 `t_schedule` 方法切到下一个 ready 的线程
+3. `run` 方法：启动 Runtime，不断循环调用 `t_yield` 来挂起自身（base 线程），然后切换到下一个 ready 的 user 线程，直至用户任务均执行完毕
 4. `r#yield` 函数：用户任务代码使用此函数挂起所在线程
 
-## 切换绿色线程
+## 切换线程
 ```rust
 #[naked]
 #[no_mangle]
@@ -275,12 +279,15 @@ unsafe extern "C" fn switch(old: *mut ThreadContext, new: *const ThreadContext) 
 1. 保存 Runtime 执行流上下文到 base 线程对应的 ThreadContext 中（后续才能切换回 base 线程继续向下执行 Runtime 代码）
 2. 加载首个任务执行上下文，`ld t0, 14*8(a1)` 加载用户任务入口地址（ThreadContext 中 entry 值），所以可以跳转到任务开头向下执行
 
-在 switch 函数从 user 线程第一次切换出去时
+在 switch 函数从某个 user 线程第一次切换出去时
 1. 保存当前 user 线程上下文到对应的 ThreadContext 中，此时 ThreadContext 中的任务入口地址 entry 会被实际的返回地址覆盖（这样后续切换回来不会导致又从头开始执行任务）
 2. 恢复下一个线程上下文并继续执行
 
 ## 用户代码测试
 ```rust
+const MAX_THREADS: usize = 4;
+static FINISHED_TASK_COUNT: AtomicUsize = AtomicUsize::new(0);
+
 fn main() {
     let mut runtime = Runtime::new();
     runtime.init();
@@ -307,8 +314,85 @@ fn test_task(task_id: usize) {
     println!("TASK {} FINISHED", task_id);
 }
 ```
+- 在 Runtime 运行之前，有 1 个 Running 状态的 base 线程、3 个 Ready 状态的 user 线程和 1 个 Available 状态的 user 线程
+- base 线程会在 Running 和 Ready 状态之间不断切换
+- 3 个 user 线程会在 Running 和 Ready 状态之间不断切换，当任务执行完毕后，变成 Available 状态
+- 1 个 user 线程始终保持在 Available 状态
 
 输出
 ```
-TODO
+RUNTIME: spawning task on green thread 1
+RUNTIME: spawning task on green thread 2
+RUNTIME: spawning task on green thread 3
+RUNTIME: schedule next thread 1 to be run
+TASK 1 STARTING
+task: 1 counter: 0
+RUNTIME: schedule next thread 2 to be run
+TASK 2 STARTING
+task: 2 counter: 0
+RUNTIME: schedule next thread 3 to be run
+TASK 3 STARTING
+task: 3 counter: 0
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 1 to be run
+task: 1 counter: 1
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 1
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 1
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 1 to be run
+task: 1 counter: 2
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 2
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 2
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 1 to be run
+task: 1 counter: 3
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 3
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 3
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 1 to be run
+TASK 1 FINISHED
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 4
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 4
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 5
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 5
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 6
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 6
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 2 to be run
+task: 2 counter: 7
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 7
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 2 to be run
+TASK 2 FINISHED
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 8
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 9
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 10
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 3 to be run
+task: 3 counter: 11
+RUNTIME: schedule next thread 0 to be run
+RUNTIME: schedule next thread 3 to be run
+TASK 3 FINISHED
+RUNTIME: schedule next thread 0 to be run
+All tasks finished!
 ```

@@ -9,7 +9,7 @@ date = 2024-12-09
 ![](./smol-crates-overview.drawio.png)
 
 - [polling]: 提供一个在 epoll / kqueue / iocp 等之上的统一接口
-- [async-io]: 实现 Reactor 和 Driver 底层机制并对外提供 Async 和 Timer 两个工具来实现异步 IO 和定时器
+- [async-io]: 实现 reactor 和 driver 底层机制并对外提供 Async 和 Timer 两个工具来实现异步 IO 和定时器
 - [async-net]: 基于 async-io 库提供的 Async 工具来将标准库的同步 IO 转变成异步 IO
 - [async-task]: TODO 123
 - [async-executor]: TODO 123
@@ -102,6 +102,44 @@ async fn my_server() -> std::io::Result<()> {
 以上示例创建了一个同步的 TcpListener 并用 Async 包装起来，然后就可以执行异步的 IO 操作。其原理是在 poll 时，会向 Reactor 传递 waker，等到有新的 IO 事件时，Reactor 再通过 waker 进行通知，然后再执行 TcpListener 的 accept 同步方法，此时执行 accept 不会阻塞，而是能里立刻返回。
 
 ## async-task
+
+async-task 提供了异步任务的抽象封装，异步任务 RawTask 包含 future 以及 future 运行时所需的内容，基于 RawTask 对外提供了两个安全的封装 Runnable 和 Task。Runnable 主要给上层 Executor 使用，Task 主要面向用户使用。
+
+![](./async-task-layout.drawio.png)
+
+RawTask 包含：
+- state: 任务状态
+- awaiter: TODO
+- vtable: 指向一个静态变量
+  - schedule: 实际会调用 custom_schedule
+  - drop_future:
+  - get_output:
+  - drop_ref: 
+  - destroy:
+  - run: 
+  - clone_waker:
+  - layout_info:
+- metadata: Executor 传入的自定义数据
+- custom_schedule: Executor 传入的调度方法
+- future / output: 一块 union 区域，存放 future 或者其结果 output
+
+任务主要有以下状态：
+1. scheduled: 即将被调度执行
+2. running: 正在执行 poll
+3. completed: 任务完成（output 还没被读取）
+4. closed: 任务关闭（任务被取消或者 output 已被读取）
+
+**创建异步任务**
+
+创建异步任务 `fn spawn<F, S>(future: F, schedule: S) -> (Runnable, Task<F::Output>)` 需要传入 future 和 custom_schedule 方法，任务初始状态为 scheduled，返回 Runnable 和 Task。
+
+**Runnable**
+- schedule 方法：用于让 Executor 调度该任务，此方法仅调用 custom_schedule 方法，无其他行为
+- run 方法：实际调用 RawTask::run 方法，用于让 Executor 对任务执行 poll 操作，如果任务执行完毕，则将状态改为 completed。如果任务是 closed 状态，会执行资源清理动作
+
+**Task**
+- poll_task 方法：如果任务未完成，则注册 waker 并返回 Poll::Pending；如果任务完成了，则读取 output 并将任务置为 closed
+- cancel 方法：通过将任务置为 closed，会重新发起一次调度，在执行任务过程中进行后续资源清理动作
 
 ## async-executor
 

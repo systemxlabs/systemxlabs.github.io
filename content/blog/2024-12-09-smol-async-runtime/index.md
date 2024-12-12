@@ -3,7 +3,7 @@ title = "Rust 异步运行时 smol 剖析"
 date = 2024-12-09
 +++
 
-[smol] 是一个微型且快速的 Rust 异步运行时，它由许多微型的 crate 组成（比如 polling / async-io / async-executor 等），每个 crate 相对独立，非常适合学习 Rust 异步运行时是如何一步步构建的。
+[smol] 是一个小型且快速的 Rust 异步运行时，它由许多小型的 crate 组成（比如 polling / async-io / async-executor 等），每个 crate 相对独立，非常适合学习 Rust 异步运行时是如何一步步构建的。
 
 ## crates 概览
 ![](./smol-crates-overview.drawio.png)
@@ -11,10 +11,10 @@ date = 2024-12-09
 - [polling]: 提供一个在 epoll / kqueue / iocp 等之上的统一接口
 - [async-io]: 实现 reactor 和 driver 底层机制并对外提供 Async 和 Timer 两个工具来实现异步 IO 和定时器
 - [async-net]: 基于 async-io 库提供的 Async 工具来将标准库的同步 IO 转变成异步 IO
-- [async-task]: TODO 123
-- [async-executor]: TODO 123
+- [async-task]: 提供异步任务的抽象封装，便于构建自己的 executor
+- [async-executor]: 提供了一个简单的 executor
 
-注：省略了一些非核心 crate，比如异步文件系统原语的 async-fs、异步网络的 async-net 等（对标准库实现的异步封装），以及 smol（它只是对众多 crates 的重新导出而已）。
+注：学习以上 crates 即可了解异步运行时从底层到上层的原理。省略了许多不重要的 crates，比如异步文件系统原语的 async-fs（使用线程池跑同步的文件操作来实现异步）、异步网络的 async-net 等（基于 async-io 的 Async 工具对标准库的封装），以及 smol（它只是对众多 crates 的重新导出而已）等等。
 
 ## polling
 
@@ -149,6 +149,55 @@ RawTask 包含：
 **Awaiter**：用户 await Task 时传入的 waker，当异步任务完成时唤醒 Executor 再次 poll 获取 future 结果
 
 ## async-executor
+
+async-executor 提供了两个简单的 executor 用于执行用户异步任务。
+- Executor：实现了 Send + Sync，支持多线程，spawn 方法限制 future 需要实现 Send
+- LocalExecutor：对 Executor 的包装，未实现 Send + Sync，限定单线程，spawn 方法不需要 future 实现 Send
+
+使用 Executor 实现一个多线程异步运行时
+```rust
+fn main() {
+    let ex = Executor::new();
+
+    thread::scope(|scope| {
+        for _ in 0..5 {
+            scope.spawn(|| block_on(ex.run(core::future::pending::<()>())));
+        }
+        block_on(async {
+            let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+            loop {
+                let (stream, addr) = listener.accept().await.unwrap();
+                println!("Accepted connection from: {}", addr);
+                let task = ex.spawn(handle_new_connection(stream, addr));
+                task.detach();
+            }
+        })
+    })
+}
+
+async fn handle_new_connection(_stream: TcpStream, addr: SocketAddr) {
+    Timer::after(Duration::from_secs(10)).await;
+    println!(
+        "[{:?}] Handle connection from: {}",
+        thread::current().id(),
+        addr
+    );
+}
+
+// 类似于 tokio 以下代码
+#[tokio::main]
+async fn main() {
+    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+
+    loop {
+        let (stream, addr) = listener.accept().await.unwrap();
+        tokio::spawn(async move {
+            handle_new_connection(stream, addr).await;
+        });
+    }
+}
+```
+
 
 [smol]: https://github.com/smol-rs/smol
 [polling]: https://github.com/smol-rs/polling

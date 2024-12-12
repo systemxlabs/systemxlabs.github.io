@@ -109,16 +109,15 @@ async-task 提供了异步任务的抽象封装，异步任务 RawTask 包含 fu
 
 RawTask 包含：
 - state: 任务状态
-- awaiter: TODO
-- vtable: 指向一个静态变量
+- awaiter: 用户 await Task 时注册的 waker
+- vtable: 指向一个静态变量，包含各种函数指针
   - schedule: 实际会调用 custom_schedule
-  - drop_future:
-  - get_output:
-  - drop_ref: 
-  - destroy:
-  - run: 
-  - clone_waker:
-  - layout_info:
+  - drop_future: 析构 future
+  - get_output: 读取 future 结果
+  - drop_ref: 减少任务引用计数，当引用计数归零时，调用 destroy 销毁任务
+  - destroy: 清理任务的资源和内存
+  - run: 执行异步任务
+  - clone_waker: 克隆一个新的 waker
 - metadata: Executor 传入的自定义数据
 - custom_schedule: Executor 传入的调度方法
 - future / output: 一块 union 区域，存放 future 或者其结果 output
@@ -140,6 +139,14 @@ RawTask 包含：
 **Task**
 - poll_task 方法：如果任务未完成，则注册 waker 并返回 Poll::Pending；如果任务完成了，则读取 output 并将任务置为 closed
 - cancel 方法：通过将任务置为 closed，会重新发起一次调度，在执行任务过程中进行后续资源清理动作
+
+**Waker**: 异步任务内部管理的用于传递给 Reactor 的 waker，当 IO 源 ready 时唤醒异步任务并触发一次调度
+- clone_waker: 调用 RawWaker::clone_waker 克隆一个新的 waker
+- wake: 通过将任务设置为 scheduled 状态并触发一次调度，清理 waker 关联资源
+- wake_by_ref: 通过将任务设置为 scheduled 状态并触发一次调度
+- drop_waker: 减少任务引用计数
+
+**Awaiter**：用户 await Task 时传入的 waker，当异步任务完成时唤醒 Executor 再次 poll 获取 future 结果
 
 ## async-executor
 

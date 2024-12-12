@@ -154,6 +154,30 @@ async-executor 提供了两个简单的 executor 用于执行用户异步任务�
 - Executor：实现了 Send + Sync，支持多线程，spawn 方法限制 future 需要实现 Send
 - LocalExecutor：对 Executor 的包装，未实现 Send + Sync，限定单线程，spawn 方法不需要 future 实现 Send
 
+核心数据为
+```rust
+struct State {
+    /// 全局队列
+    queue: ConcurrentQueue<Runnable>,
+
+    /// 本地队列
+    local_queues: RwLock<Vec<Arc<ConcurrentQueue<Runnable>>>>,
+
+    /// TODO
+    notified: AtomicBool,
+
+    /// 等待从全局队列获取新的任务（全局队列为空）
+    sleepers: Mutex<Sleepers>,
+
+    /// TODO
+    active: Mutex<Slab<Waker>>,
+}
+```
+
+有两种驱动 executor 的方法：
+1. tick：从全局队列选取一个任务来执行 poll，当全局队列无任务时，注册一个 sleeper 等待
+2. run：传入一个 future，运行该 future 直至完成
+
 使用 Executor 实现一个多线程异步运行时
 ```rust
 fn main() {

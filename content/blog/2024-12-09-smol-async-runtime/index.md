@@ -93,15 +93,34 @@ async-io 提供了一个全局唯一的 Reactor 实例来支持对定时器 Time
 
 Reactor 提供了 `insert_io` / `remove_io` / `insert_timer` / `remove_timer` 方法来向 Reactor （取消）注册 IO 对象或者定时器，对于 IO 对象，会（取消）注册到底层 OS 的 IO 多路复用机制上（如 epoll）。
 
-Reactor 的核心是 `fn react(&mut self, timeout: Option<Duration>) -> io::Result<()>` 方法，它会阻塞线程直到有新的 IO / timer 事件（如果传入了超时时间则可能超时返回），当收到新的事件后，通过 poll future 传递下来的 waker 来进行唤醒。它通过 Mutex 被限制为只能有一个线程来执行，无法并发执行。
+```rust
+/// IO 源
+#[derive(Debug)]
+pub(crate) struct Source {
+    /// IO 文件描述符
+    registration: Registration,
+
+    /// IO 源的 ID，注册到 epoll 时携带，用它来区分 IO 事件来自哪个 IO 源
+    key: usize,
+
+    /// IO 源的读端和写端的状态，和监听它的 wakers
+    state: Mutex<[Direction; 2]>,
+}
+```
+Reactor 将 IO 源封装为一个 `Source` 结构，上层持有 `Source` 可以进行 poll，如果 IO 源 ready 则返回 `Poll::Ready`，否则 Reactor 会保存 waker 并返回 `Poll::Pending`。一个 IO 源可以被多个 wakers 来监听。
+
+Reactor 的核心是 `fn react(&mut self, timeout: Option<Duration>) -> io::Result<()>` 方法，它会阻塞线程直到有新的 IO / timer 事件（如果传入了超时时间则可能超时返回），当收到新的事件后，通过 poll 传递下来的 waker 来进行唤醒。它通过 Mutex 被限制为只能有一个线程来执行，无法并发执行。
 
 Reactor 通过 tick 机制来保证 IO 事件是否是“新鲜的”，在每轮 `react` 方法执行期间，tick 值都会自增 1。
 
 **Driver**
 
-Driver 是一个单独的 OS 线程，在 Reactor 初始化时一并创建。它不断循环的去尝试获取 Reactor 锁并执行其 `react` 方法，然后 `react` 方法会阻塞 Driver 线程直至有新的 timer / IO 事件产生。
+因为 epoll 的模型就是需要用户去轮询，它不会主动推送 IO 事件，所以我们需要 Driver 来驱动。Driver 是一个单独的 OS 线程，在 Reactor 初始化时一并创建。它不断循环的去尝试获取 Reactor 锁并执行其 `react` 方法，然后 `react` 方法会阻塞 Driver 线程直至有新的 timer / IO 事件产生。
 
 **Async**
+
+Async 的原理是通过异步机制监控 IO 源是否 ready，对其进行 poll 的结果是 IO 源是否可读或可写，而不是读取或写入数据到 IO 源。所以当我们需要执行同步 IO 操作时，先让 Async 监控 IO 源是否 ready，当 IO 源 ready 了再执行同步 IO 操作，这时就不会发生 IO 阻塞线程了。
+
 ```rust
 async fn my_server() -> std::io::Result<()> {
     let listener = Async::new(std::net::TcpListener::bind("127.0.0.1:8080")?)?;
@@ -111,7 +130,14 @@ async fn my_server() -> std::io::Result<()> {
     }
 }
 ```
-以上示例创建了一个同步的 `std::net::TcpListener` 并用 Async 包装起来，然后就可以异步地监听新连接。其原理是在 poll 时，会向 Reactor 传递 waker，等到有新的 IO 事件时，Reactor 再通过 waker 进行通知，然后再执行 `std::net::TcpListener::accept` 同步方法，此时执行 accept 不会阻塞，而是会立刻返回。
+以上示例创建了一个同步的 `std::net::TcpListener` 并用 Async 包装起来，然后就可以异步地监听新连接。其过程是
+1. `std::net::TcpListener` 实现了 `AsFd` trait，Async 获取其 IO 文件描述符
+2. 通过 [fcntl](https://man7.org/linux/man-pages/man2/fcntl.2.html) 系统调用将其设置为非阻塞 IO
+3. 然后 IO 对象注册到 Reactor 中，获取其 `Source` 引用
+4. 在 Async 被 poll 时，会通过其内部持有的 `Source` 来执行 poll，此时 IO 源未 ready，则 Reactor 会保存其 waker，返回 `Poll::Pending`
+5. 等到有新的 IO 事件时，Reactor 再通过 waker 通知
+6. Async 被再次 poll，此时 IO 源 ready，返回 `Poll::Ready(Ok(()))`
+7. 然后再执行 `std::net::TcpListener::accept` 同步方法，此时执行 accept 不会阻塞，而是会立刻返回
 
 ## async-task
 

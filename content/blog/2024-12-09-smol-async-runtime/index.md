@@ -11,8 +11,8 @@ date = 2024-12-09
 核心基础库
 - [polling] 提供一个在 epoll / kqueue / iocp 等之上统一的 IO 多路复用的接口
 - [async-io] 实现 reactor 和 driver 底层机制并对外提供 `Async` 和 `Timer` 两个工具来实现异步 IO 和定时器
-- [async-task] 提供异步任务的抽象封装，便于构建自己的 executor
 - [blocking] 提供用于在异步环境中隔离同步 IO 操作的线程池
+- [async-task] 提供异步任务的抽象封装，便于构建自己的 executor
 
 面向用户的上层库
 - [async-net] 基于 async-io 的 Async 工具对标准库 `std::net` 的封装

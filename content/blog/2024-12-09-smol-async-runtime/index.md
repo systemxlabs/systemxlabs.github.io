@@ -137,8 +137,9 @@ RawTask 包含：
 - run 方法：实际调用 RawTask::run 方法，用于让 Executor 对任务执行 poll 操作，如果任务执行完毕，则将状态改为 completed。如果任务是 closed 状态，会执行资源清理动作
 
 **Task**
-- poll_task 方法：如果任务未完成，则注册 waker 并返回 Poll::Pending；如果任务完成了，则读取 output 并将任务置为 closed
-- cancel 方法：通过将任务置为 closed，会重新发起一次调度，在执行任务过程中进行后续资源清理动作
+- poll_task 方法：如果任务未完成，则注册 waker 并返回 Poll::Pending；如果任务完成了，则读取 output 并将任务置为 closed 状态
+- cancel 方法：通过将任务置为 closed 状态，会重新发起一次调度，在执行任务过程中进行后续资源清理动作
+- detach 方法：通过 mem::forget 来不 drop Task，将任务置于后台运行，运行结束后直接将任务置为 closed 状态
 
 **Waker**: 异步任务内部管理的用于传递给 Reactor 的 waker，当 IO 源 ready 时唤醒异步任务并触发一次调度
 - clone_waker: 调用 RawWaker::clone_waker 克隆一个新的 waker
@@ -154,7 +155,7 @@ async-executor 提供了两个简单的 executor 用于执行用户异步任务�
 - Executor：实现了 Send + Sync，支持多线程，spawn 方法限制 future 需要实现 Send
 - LocalExecutor：对 Executor 的包装，未实现 Send + Sync，限定单线程，spawn 方法不需要 future 实现 Send
 
-核心数据为
+核心数据结构为
 ```rust
 struct State {
     /// 全局队列
@@ -163,22 +164,25 @@ struct State {
     /// 本地队列
     local_queues: RwLock<Vec<Arc<ConcurrentQueue<Runnable>>>>,
 
-    /// TODO
+    /// 是否已通知 sleeper（不重复通知）
     notified: AtomicBool,
 
-    /// 等待从全局队列获取新的任务（全局队列为空）
+    /// 等待全局队列新增任务（全局队列为空）
     sleepers: Mutex<Sleepers>,
 
-    /// TODO
-    active: Mutex<Slab<Waker>>,
+    /// 当前活跃任务（通过持有 Waker 保持任务引用计数不归零）
+    active: Mutex<Slab<Wake r>>,
 }
 ```
 
+- 调度任务（custom_schedule）：通过将任务加入到全局队列中，并通知 sleeper。
+- 执行任务：从队列获取一个任务，调用 Runnable::run 方法对 future 执行一次 poll。
+
 有两种驱动 executor 的方法：
 1. tick：从全局队列选取一个任务来执行 poll，当全局队列无任务时，注册一个 sleeper 等待
-2. run：传入一个 future，运行该 future 直至完成
+2. run：传入一个 future，运行该 future 直至完成，在运行该 future 同时会运行所属本地队列的其他任务，如果本地队列为空会从全局队列窃取任务，如果全局队列为空会从其他本地队列窃取任务，如果都没有则注册一个 sleeper 等待
 
-使用 Executor 实现一个多线程异步运行时
+## 实现一个多线程异步运行时
 ```rust
 fn main() {
     let ex = Executor::new();
@@ -187,11 +191,11 @@ fn main() {
         for _ in 0..5 {
             scope.spawn(|| block_on(ex.run(core::future::pending::<()>())));
         }
+
         block_on(async {
             let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
             loop {
                 let (stream, addr) = listener.accept().await.unwrap();
-                println!("Accepted connection from: {}", addr);
                 let task = ex.spawn(handle_new_connection(stream, addr));
                 task.detach();
             }
@@ -215,12 +219,12 @@ async fn main() {
 
     loop {
         let (stream, addr) = listener.accept().await.unwrap();
-        tokio::spawn(async move {
-            handle_new_connection(stream, addr).await;
-        });
+        tokio::spawn(handle_new_connection(stream, addr));
     }
 }
 ```
+由于 Executor 非 static 生命周期，因此采用 Scoped threads 实现多线程，主线程负责监听端口获取新连接，并创建一个后台任务处理，子线程负责从本地队列（会从全局队列或其他本地队列窃取任务）读取任务进行执行。
+
 
 
 [smol]: https://github.com/smol-rs/smol

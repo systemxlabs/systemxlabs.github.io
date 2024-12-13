@@ -36,7 +36,9 @@ polling 对 epoll / kqueue / iocp 等各平台的 IO 多路复用机制进行了
 3. 唤醒正在阻塞等待中的自身
 
 以 Linux 下 epoll 为例分析其细节，
-1. 创建 Poller 时，调用 [epoll_create1] 创建一个新的 epoll 实例并保存其返回的文件描述符，调用 [eventfd](https://man7.org/linux/man-pages/man2/eventfd.2.html) 创建用于通知（唤醒）的对象 notifier 并注册到 epoll 列表中，调用 [timerfd_create](https://man7.org/linux/man-pages/man2/timerfd_create.2.html) 创建一个定时器并将其注册到 epoll 列表中
+1. 创建 Poller 时，调用 [epoll_create1] 创建一个新的 epoll 实例并保存到 Poller 中，同时往 epoll 列表中注册两个 IO 源
+    - 调用 [eventfd](https://man7.org/linux/man-pages/man2/eventfd.2.html) 创建用于通知（唤醒）的对象 notifier
+    - 调用 [timerfd_create](https://man7.org/linux/man-pages/man2/timerfd_create.2.html) 创建的定时器
 2. 增删改感兴趣的 IO 事件时，传入其所属的文件描述符（例如 socket），关联数据（当返回 IO 事件时携带），以及一些标志位（比如只监听可读或可写事件）
 3. 阻塞等待新的 IO 事件时，可传入超时时间，当有新的 IO 事件（一个或多个） / 中断 / 超时，结束阻塞返回。这里并没有使用 [epoll_wait] 本身的超时机制，而是使用更为精确的定时器，在调用 [epoll_wait] 前会通过 [timerfd_settime](https://man7.org/linux/man-pages/man2/timerfd_settime.2.html) 设置定时器超时时间，当超时时间到达时，会在 timer 文件描述符上产生一个新的 IO 事件来结束阻塞
 4. 唤醒正在阻塞等待中的自身时，通过调用 [write](https://man7.org/linux/man-pages/man2/write.2.html) 往 notifier 文件描述符上写入数据来触发一个新的 IO 事件来结束阻塞
@@ -102,14 +104,14 @@ Driver 是一个单独的 OS 线程，在 Reactor 初始化时一并创建。它
 **Async**
 ```rust
 async fn my_server() -> std::io::Result<()> {
-    let listener: Async<TcpListener> = Async::new(TcpListener::bind("127.0.0.1:8080")?)?;
+    let listener = Async::new(std::net::TcpListener::bind("127.0.0.1:8080")?)?;
     loop {
-        let (_stream, addr) = listener.read_with(|io: &TcpListener| io.accept()).await?;
+        let (_stream, addr) = listener.read_with(|io: &std::net::TcpListener| io.accept()).await?;
         println!("Accepted connection from: {}", addr);
     }
 }
 ```
-以上示例创建了一个同步的 TcpListener 并用 Async 包装起来，然后就可以执行异步的 IO 操作。其原理是在 poll 时，会向 Reactor 传递 waker，等到有新的 IO 事件时，Reactor 再通过 waker 进行通知，然后再执行 TcpListener 的 accept 同步方法，此时执行 accept 不会阻塞，而是能里立刻返回。
+以上示例创建了一个同步的 `std::net::TcpListener` 并用 Async 包装起来，然后就可以异步地监听新连接。其原理是在 poll 时，会向 Reactor 传递 waker，等到有新的 IO 事件时，Reactor 再通过 waker 进行通知，然后再执行 `std::net::TcpListener::accept` 同步方法，此时执行 accept 不会阻塞，而是会立刻返回。
 
 ## async-task
 

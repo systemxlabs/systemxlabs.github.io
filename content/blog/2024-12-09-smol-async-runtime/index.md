@@ -8,12 +8,23 @@ date = 2024-12-09
 ## crates 概览
 ![](./smol-crates-overview.drawio.png)
 
-- [polling]: 提供一个在 epoll / kqueue / iocp 等之上的统一接口
-- [async-io]: 实现 reactor 和 driver 底层机制并对外提供 Async 和 Timer 两个工具来实现异步 IO 和定时器
-- [async-task]: 提供异步任务的抽象封装，便于构建自己的 executor
-- [async-executor]: 提供了一个简单的 executor
+核心基础库
+- [polling] 提供一个在 epoll / kqueue / iocp 等之上统一的 IO 多路复用的接口
+- [async-io] 实现 reactor 和 driver 底层机制并对外提供 `Async` 和 `Timer` 两个工具来实现异步 IO 和定时器
+- [async-task] 提供异步任务的抽象封装，便于构建自己的 executor
+- [blocking] 提供用于在异步环境中隔离同步 IO 操作的线程池
 
-注：学习以上 crates 即可了解异步运行时从底层到上层的原理。省略了许多不重要的 crates，比如异步文件系统原语的 async-fs（使用线程池跑同步的 `std::fs` 文件操作来实现异步）、异步网络的 async-net 等（基于 async-io 的 Async 工具对标准库 `std::net` 的封装），以及 smol（它只是对众多 crates 的重新导出而已）等等。
+面向用户的上层库
+- [async-net] 基于 async-io 的 Async 工具对标准库 `std::net` 的封装
+- [async-process] 基于 async-io（Unix-like 系统）和 blocking（Windows 系统）对标准库 `std::process` 的封装
+- [async-fs] 基于 blocking 对标准库 `std::fs` 的封装
+- [async-executor] 提供单线程和多线程两种 executor
+
+工具库
+- [async-channel] 提供异步的多生产者多消费者队列
+- [async-lock] 提供异步环境的同步原语，如互斥锁、读写锁等等
+
+本文主要学习 polling / async-io / async-task / async-executor 库，理解最重要的 IO 多路复用 / reactor / driver / task / executor 等概念。
 
 ## polling
 
@@ -228,10 +239,14 @@ async fn main() {
 
 [smol]: https://github.com/smol-rs/smol
 [polling]: https://github.com/smol-rs/polling
+[blocking]: https://github.com/smol-rs/blocking
 [parking]: https://github.com/smol-rs/parking
 [async-lock]: https://github.com/smol-rs/async-lock
+[async-channel]: https://github.com/smol-rs/async-channel
 [async-task]: https://github.com/smol-rs/async-task
 [async-io]: https://github.com/smol-rs/async-io
+[async-fs]: https://github.com/smol-rs/async-fs
+[async-process]: https://github.com/smol-rs/async-process
 [async-executor]: https://github.com/smol-rs/async-executor
 [async-net]: https://github.com/smol-rs/async-net
 [epoll_create1]: https://man7.org/linux/man-pages/man2/epoll_create.2.html

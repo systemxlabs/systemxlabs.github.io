@@ -209,7 +209,7 @@ struct State {
     sleepers: Mutex<Sleepers>,
 
     /// 当前活跃任务（通过持有 Waker 保持任务引用计数不归零）
-    active: Mutex<Slab<Wake r>>,
+    active: Mutex<Slab<Waker>>,
 }
 ```
 

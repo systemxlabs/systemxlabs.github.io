@@ -157,7 +157,7 @@ async-task 提供了异步任务的抽象封装，异步任务 RawTask 包含 fu
   - `run`: 执行异步任务
   - `clone_waker`: 克隆一个新的 waker
 - `metadata`: Executor 传入的自定义数据
-- `custom_schedule`: Executor 传入的调度方法，用于触发一次调度
+- `custom_schedule`: Executor 传入的调度方法，RawTask 使用它来向 Executor 触发一次调度
 - `future` / `output`: 一块 union 区域，存放 future 或者其结果 output
 
 其中 `clone_waker`、`wake`、`wake_by_ref` 和 `drop_waker` 组成了标准库 [RawWakerVTable](https://doc.rust-lang.org/std/task/struct.RawWakerVTable.html) 的四个方法。

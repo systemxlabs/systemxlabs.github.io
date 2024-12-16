@@ -141,51 +141,55 @@ async fn my_server() -> std::io::Result<()> {
 
 ## async-task
 
-async-task 提供了异步任务的抽象封装，异步任务 RawTask 包含 future 以及 future 运行时所需的内容，基于 RawTask 对外提供了两个安全的封装 Runnable 和 Task。Runnable 主要给上层 Executor 使用，Task 主要面向用户使用。
+async-task 提供了异步任务的抽象封装，异步任务 RawTask 包含 future 以及 future 运行时所需的内容，基于 RawTask 对外提供了两个安全的封装 Runnable 和 Task。Runnable 主要给上层 Executor 使用，Executor 可以使用 Runnable 触发一次调度或者执行一次 poll。Task 主要面向用户使用，用户可以 await Task，也可以取消 Task 或者让 Task 后台运行。
 
 ![](./async-task-layout.drawio.png)
 
-RawTask 包含：
-- state: 任务状态
-- awaiter: 用户 await Task 时注册的 waker
-- vtable: 指向一个静态变量，包含各种函数指针
-  - schedule: 实际会调用 custom_schedule
-  - drop_future: 析构 future
-  - get_output: 读取 future 结果
-  - drop_ref: 减少任务引用计数，当引用计数归零时，调用 destroy 销毁任务
-  - destroy: 清理任务的资源和内存
-  - run: 执行异步任务
-  - clone_waker: 克隆一个新的 waker
-- metadata: Executor 传入的自定义数据
-- custom_schedule: Executor 传入的调度方法
-- future / output: 一块 union 区域，存放 future 或者其结果 output
+以上是 RawTask 的内存布局，包含：
+- `state`: 任务状态
+- `awaiter`: 用户 poll Task 时注册的 waker
+- `vtable`: 指向一个静态变量，包含各种函数指针
+  - `schedule`: 实际会调用 custom_schedule
+  - `drop_future`: 析构 future
+  - `get_output`: 读取 future 结果
+  - `drop_ref`: 减少任务引用计数，当引用计数归零时，调用 destroy 销毁任务
+  - `destroy`: 清理任务的资源和内存
+  - `run`: 执行异步任务
+  - `clone_waker`: 克隆一个新的 waker
+- `metadata`: Executor 传入的自定义数据
+- `custom_schedule`: Executor 传入的调度方法，用于触发一次调度
+- `future` / `output`: 一块 union 区域，存放 future 或者其结果 output
+
+其中 `clone_waker`、`wake`、`wake_by_ref` 和 `drop_waker` 组成了标准库 [RawWakerVTable](https://doc.rust-lang.org/std/task/struct.RawWakerVTable.html) 的四个方法。
+
+RawTask 内包含一套引用计数机制，Runnable、Task 和 Waker 都持有对 RawTask 的引用，当引用计数归零时，就会执行 `destroy` 方法清理 RawTask 资源和内存。
 
 任务主要有以下状态：
-1. scheduled: 即将被调度执行
-2. running: 正在执行 poll
-3. completed: 任务完成（output 还没被读取）
-4. closed: 任务关闭（任务被取消或者 output 已被读取）
+1. `scheduled`: 即将被调度执行
+2. `running`: 正在执行 poll
+3. `completed`: 任务完成（output 还没被读取）
+4. `closed`: 任务关闭（任务被取消或者 output 已被读取）
 
 **创建异步任务**
 
-创建异步任务 `fn spawn<F, S>(future: F, schedule: S) -> (Runnable, Task<F::Output>)` 需要传入 future 和 custom_schedule 方法，任务初始状态为 scheduled，返回 Runnable 和 Task。
+创建异步任务 `fn spawn<F, S>(future: F, schedule: S) -> (Runnable, Task<F::Output>)` 需要传入 future 和 custom_schedule 方法，任务初始状态为 `scheduled`，返回 Runnable 和 Task。
 
 **Runnable**
-- schedule 方法：用于让 Executor 调度该任务，此方法仅调用 custom_schedule 方法，无其他行为
-- run 方法：实际调用 `RawTask::run` 方法，用于让 Executor 对任务执行 poll 操作，如果任务执行完毕，则将状态改为 completed。如果任务是 closed 状态，会执行资源清理动作
+- `schedule` 方法：用于让 Executor 调度该任务，此方法仅调用 `custom_schedule` 方法，无其他行为
+- `run` 方法：实际调用 `RawTask::run` 方法，用于让 Executor 对任务执行 poll 操作，如果任务执行完毕，则将状态改为 `completed`。如果任务是 `closed` 状态，会执行资源清理动作
 
 **Task**
-- poll_task 方法：如果任务未完成，则注册 waker 并返回 `Poll::Pending`；如果任务完成了，则读取 output 并将任务置为 closed 状态
-- cancel 方法：通过将任务置为 closed 状态，会重新发起一次调度，在执行任务过程中进行后续资源清理动作
-- detach 方法：通过 `mem::forget` 来不 drop Task，将任务置于后台运行，运行结束后直接将任务置为 closed 状态
+- `poll_task` 方法：如果任务未完成，则注册 waker 并返回 `Poll::Pending`；如果任务完成了，则读取 output 并将任务置为 `closed` 状态
+- `cancel` 方法：通过将任务置为 `closed` 状态，会重新发起一次调度，在执行任务过程中进行后续资源清理动作
+- `detach` 方法：通过 `mem::forget` 来不 drop Task，将任务置于后台运行，运行结束后直接将任务置为 `closed` 状态
 
-**Waker**: 异步任务内部管理的用于传递给 Reactor 的 waker，当 IO 源 ready 时唤醒异步任务并触发一次调度
-- clone_waker: 调用 `RawWaker::clone_waker` 克隆一个新的 waker
-- wake: 通过将任务设置为 scheduled 状态并触发一次调度，清理 waker 关联资源
-- wake_by_ref: 通过将任务设置为 scheduled 状态并触发一次调度
-- drop_waker: 减少任务引用计数
+**Waker**: 异步任务内部管理的用于传递给 Reactor 的 waker，当 IO 源 ready 时唤醒异步任务并触发一次调度，一个异步任务可以有多个 IO 源，所以也会有多个 waker
+- `clone_waker`: 调用 `RawWaker::clone_waker` 克隆一个新的 waker
+- `wake`: 通过将任务设置为 `scheduled` 状态并触发一次调度，清理 waker 关联资源
+- `wake_by_ref`: 通过将任务设置为 `scheduled` 状态并触发一次调度
+- `drop_waker`: 减少任务引用计数
 
-**Awaiter**：用户 await Task （如通过 block_on）时传入的 waker，当异步任务完成时唤醒用户再次 poll 获取 future 结果
+**Awaiter**：用户 await Task （如通过 block_on）时传入的 waker，当异步任务完成时唤醒用户再次 poll 获取 future 结果，一个异步任务对应至多一个 Awaiter（当任务后台运行时则没有）
 
 ## async-executor
 

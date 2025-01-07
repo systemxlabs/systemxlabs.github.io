@@ -23,7 +23,7 @@ Nested Loop Join 会参与两个物理阶段优化
 
 ## 执行
 ### 第一阶段：build 阶段
-读取左表数据所有 partition 的数据到内存中，被所有线程共享。
+读取左表所有 partition 的数据到内存中，被所有线程共享。
 
 ### 第二阶段：probe 阶段
 probe 阶段是分 partition 并行执行的，每个线程不断读取对应 partition 的右表数据，与左表数据进行 join。

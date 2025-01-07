@@ -34,7 +34,7 @@ probe 阶段是分 partition 并行执行的，每个线程不断读取对应 pa
 
 ![](./datafusion-nlj-example-data.drawio.png)
 
-第一步，先构建 cross join 连接下的行索引
+第一步，先构建两个表的行索引的笛卡尔积
 
 |left_indices | right_indices |
 |-------------|---------------|

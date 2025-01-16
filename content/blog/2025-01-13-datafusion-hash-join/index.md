@@ -17,8 +17,9 @@ Hash Join 主要参与以下优化
 1. projection push down：优化器会尝试将 projection 下推到 Hash Join 算子的输入
 2. enforce distribution：在左右表上插入 Repartition 算子，将分区方式改成按等值条件哈希分区
 3. join selection
-    - join reorder
-    - 转换为 Symmetric Hash Join
+    - 优化器会根据 join 两边输入的统计信息，将小表放到左侧，大表放到右侧
+    ![](./datafusion-projection-pushdown-for-hash-join.png)
+    - 如果左右输入均为无界且增量的（接收一批处理一批），则转换为 Symmetric Hash Join
 
 ## 执行
 Hash Join 有两种执行模式：CollectLeft 和 Partitioned

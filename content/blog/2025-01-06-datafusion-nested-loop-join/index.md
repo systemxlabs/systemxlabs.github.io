@@ -15,7 +15,7 @@ Nested Loop Join 是最通用的一种 join 实现，原理简单，实现容易
 
 ## 优化
 Nested Loop Join 会参与两个物理阶段优化
-1. projection push down：优化器会尝试将 projection 下推到 Nested Loop Join 算子的输入
+1. projection push down：优化器会尝试将 projection 下推到 Nested Loop Join 算子的输入，如果无法下推，会尝试将 projection 嵌入到 Nested Loop Join 算子中
 
 ![](./datafusion-projection-pushdown-for-nlj.drawio.png)
 

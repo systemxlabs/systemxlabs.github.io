@@ -14,7 +14,7 @@ date = 2025-01-13
 
 ## 执行模式
 Hash Join 有两种执行模式：CollectLeft 和 Partitioned
-- CollectLeft 模式更加通用，会先将左表数据全部读取出来构建哈希表，然后跟右表 join
+- CollectLeft 模式更加通用，会先将左表数据全部读取出来构建哈希表（被所有线程共享），然后跟右表 join
 - Partitioned 模式并行度更高，但要求左右表的 partition 数量相同并且分区方式都是以等值连接条件中的表达式进行哈希分区（例如 `on t0.a = t1.c`，左表需要按照 `t0.a` 进行哈希分区，右表需要按照 `t1.c` 进行哈希分区），它只需将左右表对应 partition 数据进行 join，无需构建一个全局的哈希表
     ![](./datafusion-hash-join-partitioned-stream.drawio.png)
 

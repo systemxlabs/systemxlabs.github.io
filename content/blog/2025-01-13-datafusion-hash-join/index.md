@@ -1,7 +1,6 @@
 +++
 title = "DataFusion 查询引擎 Hash Join"
 date = 2025-01-13
-draft = true
 +++
 
 对于含有等值连接条件的 Join，可以采用 Hash Join 方式进行加速计算，它利用了哈希表的查询特性，其本身也可以更好的并行化。
@@ -11,6 +10,7 @@ draft = true
 1. `select * from t0 join t1 on t0.a = t1.c` 有一个 On 条件且是等值条件，走 Hash Join 算子
 2. `select * from t0 join t1 on t0.a > t1.c` 有一个 On 条件但非等值条件，走 Nested Loop Join 算子
 3. `select * from t0 join t1 on t0.a > t1.c and t0.b = t1.d` 有多个 On 条件且其中包含等值条件，走 Hash Join 算子
+4. `select * from t0 join t1 on t0.a = t1.c or t0.b > t1.d` 有多个 On 条件但是是或的关系，走 Nested Loop Join 算子
 
 ## 执行模式
 Hash Join 有两种执行模式：CollectLeft 和 Partitioned
@@ -31,7 +31,6 @@ Hash Join 主要参与以下优化
 1. projection push down：优化器会尝试将 projection 下推到 Hash Join 算子的输入，如果无法下推，会尝试将 projection 嵌入到 Hash Join 算子中
     ![](./datafusion-projection-pushdown-for-hash-join.drawio.png)
 2. enforce distribution：
-    - TODO 调整 join keys 顺序，让左右表的数据跟 join keys 的顺序一致
     - 对于 CollectLeft 模式，在左表上插入 Coalesce Partitions / Sort Preserving Merge 算子，将其所有 partition 合并成 1 个
     - 对于 Partitioned 模式，在左右表上插入 Repartition 算子，将其分区方式改成按等值条件哈希分区
 3. join selection
@@ -144,3 +143,7 @@ probe 阶段不断读取右表 partition0 的数据，与左表 partition0 数�
 4. 使用上面拿到的 1（实际行索引为 0）从 `Vec<u64>` 拿到 `0`
 5. 由于上面拿到的值为 0，停止检索
 6. 最终检索到的结果是 `5, 3, 1`，因此实际行索引结果是 `4, 2, 0`
+
+**保持输出顺序和输入顺序一致**
+
+以上例子中输入的顺序是 `0, 2, 4`，而哈希检索结果中的顺序是 `4, 2, 0`。因此为了保持顺序一致，在构建哈希表时，DataFusion 会对输入数据进行翻转。

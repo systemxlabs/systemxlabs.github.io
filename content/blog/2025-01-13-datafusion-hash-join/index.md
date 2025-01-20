@@ -30,7 +30,7 @@ Hash Join 有两种执行模式：CollectLeft 和 Partitioned
 Hash Join 主要参与以下优化
 1. projection push down：优化器会尝试将 projection 下推到 Hash Join 算子的输入，如果无法下推，会尝试将 projection 嵌入到 Hash Join 算子中
     ![](./datafusion-projection-pushdown-for-hash-join.drawio.png)
-2. enforce distribution：
+2. enforce distribution
     - 对于 CollectLeft 模式，在左表上插入 Coalesce Partitions / Sort Preserving Merge 算子，将其所有 partition 合并成 1 个
     - 对于 Partitioned 模式，在左右表上插入 Repartition 算子，将其分区方式改成按等值连接条件哈希分区
 3. join selection

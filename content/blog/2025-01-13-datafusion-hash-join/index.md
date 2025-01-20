@@ -40,13 +40,19 @@ Hash Join 主要参与以下优化
 
 ## 执行
 
-以 Partition 模式为例，SQL 为 `select * from t0 full join t1 on t0.a = t1.c and t0.b > t1.d`，左右表的每个 partition 都会经历如下阶段，以第 0 号 partition 为例
+以 Partitioned 模式为例，SQL 为 `select * from t0 full join t1 on t0.a = t1.c and t0.b > t1.d`，左右表的每个 partition 都会经历如下阶段，以第 0 号 partition 为例
 
 ### 第一阶段：build 阶段
 
 对左表的 partition0 所有数据构建哈希表，其中 key 为 `t0.a` 列值的哈希值，value 为行索引（这里会处理哈希冲突情况）。
 
+例如左表 partition0 数据
 
+| 行索引 | t0.a | t0.b |
+|-------|---|---|
+|0|3|1|
+|1|6|0|
+|2|4|5|
 
 ### 第二阶段：probe 阶段
 
@@ -54,7 +60,25 @@ probe 阶段不断读取右表 partition0 的数据，与左表 partition0 数�
 
 第一步，从右表读取一批数据，构建这一批数据的哈希表，其 key 为行索引，value 为 `t1.c` 列值的哈希值
 
-第二步，使用第一步中构建的哈希表，从 build 阶段构建的左表的哈希表中查找满足等值条件的行的索引
+| 行索引 | t1.c | t0.d |
+|-------|---|---|
+|0|2|6|
+|1|4|2|
+|2|3|3|
+
+第二步，使用第一步中构建的哈希表，从 build 阶段构建的左表的哈希表中查找满足等值连接条件 `t0.a = t1.c` 的行索引，然后根据行索引来比较 `t0.a` 列与 `t1.c` 列是否真的相等
+
+
+
+第三步，使用非等值连接条件 `t0.b > t1.d` 进行过滤
+
+第四步，根据 join 类型调整行索引
+1. 如果是 inner join，则不调整
+2. 如果是 left join，在第三阶段输出未匹配的左表数据
+3. 如果是 right join，则追加右表未匹配的行
+4. 如果是 full join，跟 right join 类似，不过还会在第三阶段输出未匹配的左表数据
+
+第五步，根据行索引结合 projection 输出 join 结果
 
 ## 哈希表设计
 

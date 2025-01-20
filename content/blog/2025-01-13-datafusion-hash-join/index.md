@@ -10,15 +10,15 @@ date = 2025-01-13
 1. `select * from t0 join t1 on t0.a = t1.c` 有一个 On 条件且是等值条件，走 Hash Join 算子
 2. `select * from t0 join t1 on t0.a > t1.c` 有一个 On 条件但非等值条件，走 Nested Loop Join 算子
 3. `select * from t0 join t1 on t0.a > t1.c and t0.b = t1.d` 有多个 On 条件且其中包含等值条件，走 Hash Join 算子
-4. `select * from t0 join t1 on t0.a = t1.c or t0.b > t1.d` 有多个 On 条件但是是或的关系，走 Nested Loop Join 算子
+4. `select * from t0 join t1 on t0.a = t1.c or t0.b > t1.d` 有多个 On 条件且其中包含等值条件，但是是“或”的关系，走 Nested Loop Join 算子
 
 ## 执行模式
 Hash Join 有两种执行模式：CollectLeft 和 Partitioned
 - CollectLeft 模式更加通用，会先将左表数据全部读取出来构建哈希表，然后跟右表 join
-- Partitioned 模式并行度更高，但要求左右表的 partition 数量相同并且分区方式都是以等值条件中的表达式进行哈希分区（例如 `on t0.a = t1.c`，左表需要按照 `t0.a` 进行哈希分区，右表需要按照 `t1.c` 进行哈希分区），它只需将左右表对应 partition 数据进行 join，无需构建一个全局的哈希表
+- Partitioned 模式并行度更高，但要求左右表的 partition 数量相同并且分区方式都是以等值连接条件中的表达式进行哈希分区（例如 `on t0.a = t1.c`，左表需要按照 `t0.a` 进行哈希分区，右表需要按照 `t1.c` 进行哈希分区），它只需将左右表对应 partition 数据进行 join，无需构建一个全局的哈希表
     ![](./datafusion-hash-join-partitioned-stream.drawio.png)
 
-**Partitioned 模式下左右表数据的分布**：左右表中具有相同 join keys 的行一定被分布到左右对应相同的 partition 中（例如左右表中 join key 值为 2 的行均被分布到各自的 1 号 partition 中）。
+**Partitioned 模式下左右表数据的分布**：左右表中具有相同 join keys（等值） 的行一定被分布到左右对应相同的 partition 中（例如左右表中 join key 值为 2 的行均被分布到各自的 1 号 partition 中）。
 ![](./datafusion-hash-join-data-distribution.drawio.png)
 
 执行模式选择策略：
@@ -32,7 +32,7 @@ Hash Join 主要参与以下优化
     ![](./datafusion-projection-pushdown-for-hash-join.drawio.png)
 2. enforce distribution：
     - 对于 CollectLeft 模式，在左表上插入 Coalesce Partitions / Sort Preserving Merge 算子，将其所有 partition 合并成 1 个
-    - 对于 Partitioned 模式，在左右表上插入 Repartition 算子，将其分区方式改成按等值条件哈希分区
+    - 对于 Partitioned 模式，在左右表上插入 Repartition 算子，将其分区方式改成按等值连接条件哈希分区
 3. join selection
     - 优化器会根据 join 两边输入的统计信息，将小表放到左侧，大表放到右侧
     - 如果左右输入均为无界且增量的（增量的意思是例如 filter 这种接收一批处理一批），则转换为 Symmetric Hash Join
@@ -128,7 +128,7 @@ probe 阶段不断读取右表 partition0 的数据，与左表 partition0 数�
 
 ## 哈希表设计
 
-当前 DataFusion 采用的哈希表设计是基于 `hashbrown::RawTable` 和 `Vec<u64>`，自己计算哈希值和解决哈希冲突，`RawTable` 存放无冲突的哈希值到行索引映射，`Vec<u64>` 存放哈希冲突的映射。哈希表的内存是一次性分配好，后续不会 rehash。
+当前 DataFusion 采用的哈希表设计是基于 `hashbrown::RawTable` 和 `Vec<u64>`，自己计算哈希值和解决哈希冲突，`RawTable` 存放无冲突的哈希值到行索引映射，`Vec<u64>` 存放哈希冲突的映射。哈希表的内存是一次性分配好，后续不会扩容。
 
 假设左表的数据共有 10 行，在建立哈希表时，会分配一个容量为 10 的 `RawTable` 和 `Vec<u64>`。
 

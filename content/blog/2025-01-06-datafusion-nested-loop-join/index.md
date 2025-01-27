@@ -60,6 +60,7 @@ probe 阶段是分 partition 并行执行的，每个线程不断读取对应 pa
 1. 如果是 inner join，则不调整
 2. 如果是 left join，在第三阶段输出未匹配的左表数据
 3. 如果是 right join，则追加右表未匹配的行
+4. 如果是 full join，跟 right join 类似，不过还会在第三阶段输出未匹配的左表数据
 
 | 左表行索引 | 右表行索引 |
 |-----------|-----------|
@@ -68,7 +69,6 @@ probe 阶段是分 partition 并行执行的，每个线程不断读取对应 pa
 |1|2|
 |NULL|1|
 
-4. 如果是 full join，跟 right join 类似，不过还会在第三阶段输出未匹配的左表数据
 
 第四步，根据行索引结合 projection 输出 join 结果。例如 full join，会输出
 

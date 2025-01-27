@@ -128,7 +128,7 @@ probe 阶段不断读取右表 partition0 的数据，与左表 partition0 数�
 
 ## 哈希表设计
 
-当前 DataFusion 采用的哈希表设计是基于 `hashbrown::RawTable` 和 `Vec<u64>`，自己计算哈希值和解决哈希冲突，`RawTable` 存放无冲突的哈希值到行索引映射，`Vec<u64>` 存放哈希冲突的映射。哈希表的内存是一次性分配好，后续不会扩容。
+当前 DataFusion 采用的哈希表设计是基于 `hashbrown::RawTable`（Google [SwissTable](https://abseil.io/blog/20180927-swisstables) 的 Rust 实现） 和 `Vec<u64>`，自己计算哈希值和解决哈希冲突，`RawTable` 存放无冲突的哈希值到行索引映射，`Vec<u64>` 存放哈希冲突的映射。哈希表的内存是一次性分配好，后续不会扩容。
 
 假设左表的数据共有 10 行，在建立哈希表时，会分配一个容量为 10 的 `RawTable` 和 `Vec<u64>`。
 

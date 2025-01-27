@@ -6,12 +6,12 @@ date = 2025-01-06
 Nested Loop Join 是最通用的一种 join 实现，原理简单，实现容易。
 
 ## 场景
-主要用于 On 子句中没有等值条件的 Join 运算。
+主要用于 On 子句中没有等值连接条件的 Join 运算。
 例如：表 `t0(a int, b int)` 和 `t1(c int, d int)`
-1. `select * from t0 join t1 on t0.a > t1.c` 有 On 条件但非等值条件，走 Nested Loop Join 算子
-2. `select * from t0 join t1` 没有任何条件且是 inner join，走 Cross Join 算子
-3. `select * from t0 left join t1` 没有任何条件，非 inner join，走 Nested Loop Join 算子
-4. `select * from t0 join t1 on t0.a > t1.c and t0.b = t1.d` 有 On 条件且其中包含等值条件，走 Hash Join 或 Sort Merge Join 算子（根据用户配置）
+1. `select * from t0 join t1 on t0.a > t1.c` 有 On 链接条件但非等值条件，走 Nested Loop Join 算子
+2. `select * from t0 join t1` 没有任何连接条件且是 inner join，走 Cross Join 算子
+3. `select * from t0 left join t1` 没有任何连接条件，非 inner join，走 Nested Loop Join 算子
+4. `select * from t0 join t1 on t0.a > t1.c and t0.b = t1.d` 有 On 连接条件且其中包含等值条件，走 Hash Join 或 Sort Merge Join 算子（根据用户配置）
 
 ## 优化
 Nested Loop Join 会参与两个物理阶段优化

@@ -10,5 +10,5 @@ template = "notes.html"
 - [The Google File System](https://static.googleusercontent.com/media/research.google.com/zh-CN//archive/gfs-sosp2003.pdf)
 
 ## Technical Books I have read
-- 《操作系统导论》 OSTEP
+- 《操作系统导论》 / Operating Systems: Three Easy Pieces
 - [rCore Tutorial Book](https://github.com/rcore-os/rCore-Tutorial-Book-v3)

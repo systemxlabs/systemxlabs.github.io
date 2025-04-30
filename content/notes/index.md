@@ -13,3 +13,4 @@ template = "notes.html"
 ## Technical Books I have read
 - 《操作系统导论》 / Operating Systems: Three Easy Pieces
 - [rCore Tutorial Book](https://github.com/rcore-os/rCore-Tutorial-Book-v3)
+- 《深入理解计算机系统》 / Computer Systems: A Programmer's Perspective

@@ -14,3 +14,4 @@ template = "notes.html"
 - 《操作系统导论》 / Operating Systems: Three Easy Pieces
 - [rCore Tutorial Book](https://github.com/rcore-os/rCore-Tutorial-Book-v3)
 - 《深入理解计算机系统》 / Computer Systems: A Programmer's Perspective
+- 《数据密集型应用系统设计》 / Designing Data-Intensive Applications

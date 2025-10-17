@@ -15,3 +15,4 @@ template = "notes.html"
 - [rCore Tutorial Book](https://github.com/rcore-os/rCore-Tutorial-Book-v3)
 - 《深入理解计算机系统》 / Computer Systems: A Programmer's Perspective
 - 《数据密集型应用系统设计》 / Designing Data-Intensive Applications
+- 《编码：隐匿在计算机软硬件背后的语言》 / Code: The Hidden Language of Computer Hardware and Software

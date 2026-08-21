@@ -6,6 +6,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write      # 允许推送到 gh-pages 分支
     steps:
       - name: checkout
         uses: actions/checkout@v3.3.0
